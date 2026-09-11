@@ -199,4 +199,24 @@ describe('D1CommentsStore', () => {
     ).first<{ c: number }>()
     expect(remainingReactions!.c).toBe(0)
   })
+
+  it('reaction reads stay under D1\'s parameter cap at a full page of 100 comments', async () => {
+    const COUNT = 100
+    const ts = new Date().toISOString()
+    const seed: D1PreparedStatement[] = []
+    for (let i = 0; i < COUNT; i++) {
+      seed.push(env.DB.prepare(
+        'INSERT INTO comments (id, resource, user_id, parent_id, body, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?)',
+      ).bind(`cap-c-${i}`, 'cap/site', 'cap-author', `c${i}`, ts, ts))
+      seed.push(env.DB.prepare(
+        'INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at) VALUES (?, ?, ?, ?, ?)',
+      ).bind(`cap-rx-${i}`, `cap-c-${i}`, 'cap-viewer', 'like', ts))
+    }
+    for (let i = 0; i < seed.length; i += 50) await env.DB.batch(seed.slice(i, i + 50))
+
+    const ids = Array.from({ length: COUNT }, (_, i) => `cap-c-${i}`)
+    // getUserReactions would bind 101 params without chunking.
+    expect(await store.getUserReactions('cap-viewer', ids)).toHaveLength(COUNT)
+    expect(await store.listReactionsForComments(ids)).toHaveLength(COUNT)
+  })
 })

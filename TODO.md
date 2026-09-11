@@ -78,12 +78,16 @@ query binds the viewer id plus one parameter per comment id; at the documented m
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Reaction lookups never exceed 100 bound parameters (chunk to <= 99 and merge, or aggregate in SQL).
-- [ ] A test fetches a page of 100 comments as an authenticated viewer and asserts 200 with correct
+- [x] Reaction lookups never exceed 100 bound parameters (chunk to <= 99 and merge, or aggregate in SQL).
+- [x] A test fetches a page of 100 comments as an authenticated viewer and asserts 200 with correct
       `reactionCounts` / `viewerReactions`.
-- [ ] Pagination still clamps `limit` to the configured maximum.
+- [x] Pagination still clamps `limit` to the configured maximum.
+
+> **Done:** `listReactionsForComments` chunks ids by 100 and `getUserReactions` by 99 (the viewer id takes
+> one slot), merging results. New store test seeds 100 comments + 100 reactions and asserts both readers
+> return all 100 (previously `getUserReactions` bound 101 params). Workers suite 63 pass.
 
 ---
 

@@ -40,6 +40,18 @@ function now(): string {
   return new Date().toISOString()
 }
 
+/** Cloudflare D1 allows at most 100 bound parameters per statement. */
+const D1_MAX_BOUND_PARAMS = 100
+
+/** Split a list into fixed-size chunks (used to stay under D1's param cap). */
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size))
+  }
+  return out
+}
+
 function rowToComment(row: CommentRow): Comment {
   return {
     id: row.id,
@@ -176,22 +188,29 @@ export class D1CommentsStore implements CommentsStore {
 
   async listReactionsForComments(commentIds: string[]): Promise<Reaction[]> {
     if (commentIds.length === 0) return []
-    const placeholders = commentIds.map(() => '?').join(',')
-    const stmt = this.db.prepare(
-      `SELECT * FROM comment_reactions WHERE comment_id IN (${placeholders})`,
-    ).bind(...commentIds)
-    const { results } = await stmt.all<ReactionRow>()
-    return results.map(rowToReaction)
+    const out: Reaction[] = []
+    for (const ids of chunk(commentIds, D1_MAX_BOUND_PARAMS)) {
+      const placeholders = ids.map(() => '?').join(',')
+      const { results } = await this.db.prepare(
+        `SELECT * FROM comment_reactions WHERE comment_id IN (${placeholders})`,
+      ).bind(...ids).all<ReactionRow>()
+      out.push(...results.map(rowToReaction))
+    }
+    return out
   }
 
   async getUserReactions(userId: string, commentIds: string[]): Promise<Reaction[]> {
     if (commentIds.length === 0) return []
-    const placeholders = commentIds.map(() => '?').join(',')
-    const stmt = this.db.prepare(
-      `SELECT * FROM comment_reactions WHERE user_id = ? AND comment_id IN (${placeholders})`,
-    ).bind(userId, ...commentIds)
-    const { results } = await stmt.all<ReactionRow>()
-    return results.map(rowToReaction)
+    const out: Reaction[] = []
+    // `userId` consumes one bound parameter, so chunks are one smaller.
+    for (const ids of chunk(commentIds, D1_MAX_BOUND_PARAMS - 1)) {
+      const placeholders = ids.map(() => '?').join(',')
+      const { results } = await this.db.prepare(
+        `SELECT * FROM comment_reactions WHERE user_id = ? AND comment_id IN (${placeholders})`,
+      ).bind(userId, ...ids).all<ReactionRow>()
+      out.push(...results.map(rowToReaction))
+    }
+    return out
   }
 
   async addReaction(input: CreateReactionInput): Promise<Reaction> {
