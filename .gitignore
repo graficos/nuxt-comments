@@ -25,6 +25,7 @@ server/auth.config.ts
 # Local tooling state (not part of the package)
 .opencode/goals/
 .vscode/settings.json
-.opencode/goals
-solutions/
+
+# Stray root-level solutions dir from older CE setup; learnings live in docs/solutions/.
+/solutions/
 cookies.txt
