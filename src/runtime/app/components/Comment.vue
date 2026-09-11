@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Comment } from '../../shared/types'
 
 const props = defineProps<{
   comment: Comment
-  /** Whether the current viewer can edit/delete this comment. */
+  /** Whether the current viewer can edit/delete this comment (top-level use). */
   canEdit?: boolean
+  /** Current viewer id. When set, edit/delete is derived per comment (needed for replies). */
+  viewerUserId?: string
   /** Allowed reaction types (from runtimeConfig.public.comments.reactions.types). */
   reactionTypes?: string[]
   /** Replies loaded per comment id (lazy thread expansion, shared down the tree). */
@@ -13,6 +16,44 @@ const props = defineProps<{
   replyHasMore?: Record<string, boolean>
   /** Whether a reply thread is expanded, per comment id. */
   replyExpanded?: Record<string, boolean>
+}>()
+
+/** Ownership of *this* comment — never inherited from a parent comment. */
+const canEditResolved = computed(() =>
+  props.viewerUserId !== undefined
+    ? props.comment.userId === props.viewerUserId && !props.comment.deletedAt
+    : (props.canEdit ?? false),
+)
+
+// Explicit slot types break the self-referential inference caused by
+// forwarding our own slots into the recursive <Comment>.
+defineSlots<{
+  'comment'?: (props: { comment: Comment }) => unknown
+  'comment-author'?: (props: { comment: Comment }) => unknown
+  'comment-body'?: (props: { comment: Comment }) => unknown
+  'comment-actions'?: (props: {
+    comment: Comment
+    canEdit: boolean
+    canDelete: boolean
+    onReply: () => void
+    onEdit: () => void
+    onDelete: () => void
+  }) => unknown
+  'reaction'?: (props: {
+    comment: Comment
+    type: string
+    count: number
+    active: boolean
+    toggle: () => void
+  }) => unknown
+  'reply'?: (props: {
+    comment: Comment
+    replies: Comment[] | undefined
+    expanded: boolean | undefined
+    hasMore: boolean | undefined
+    toggle: () => void
+    loadMore: () => void
+  }) => unknown
 }>()
 
 const emit = defineEmits<{
@@ -87,8 +128,8 @@ defineOptions({ name: 'Comment' })
       <slot
         name="comment-actions"
         :comment="comment"
-        :can-edit="canEdit"
-        :can-delete="canEdit"
+        :can-edit="canEditResolved"
+        :can-delete="canEditResolved"
         :on-reply="onReply"
         :on-edit="onEdit"
         :on-delete="onDelete"
@@ -101,7 +142,7 @@ defineOptions({ name: 'Comment' })
           Reply
         </button>
         <button
-          v-if="canEdit"
+          v-if="canEditResolved"
           type="button"
           :aria-label="`Edit comment ${comment.id}`"
           @click="onEdit"
@@ -109,7 +150,7 @@ defineOptions({ name: 'Comment' })
           Edit
         </button>
         <button
-          v-if="canEdit"
+          v-if="canEditResolved"
           type="button"
           :aria-label="`Delete comment ${comment.id}`"
           @click="onDelete"
@@ -118,27 +159,30 @@ defineOptions({ name: 'Comment' })
         </button>
       </slot>
 
-      <slot
+      <template
         v-for="type in reactionTypes"
         :key="type"
-        name="reaction"
-        :comment="comment"
-        :type="type"
-        :count="comment.reactionCounts?.[type] ?? 0"
-        :active="comment.viewerReactions?.includes(type) ?? false"
-        :toggle="() => toggleReaction(type)"
       >
-        <button
-          type="button"
-          :data-reaction-type="type"
-          :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
-          :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
-          :aria-label="`React with ${type}`"
-          @click="toggleReaction(type)"
+        <slot
+          name="reaction"
+          :comment="comment"
+          :type="type"
+          :count="comment.reactionCounts?.[type] ?? 0"
+          :active="comment.viewerReactions?.includes(type) ?? false"
+          :toggle="() => toggleReaction(type)"
         >
-          {{ type }} {{ comment.reactionCounts?.[type] ?? 0 }}
-        </button>
-      </slot>
+          <button
+            type="button"
+            :data-reaction-type="type"
+            :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
+            :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
+            :aria-label="`React with ${type}`"
+            @click="toggleReaction(type)"
+          >
+            {{ type }} {{ comment.reactionCounts?.[type] ?? 0 }}
+          </button>
+        </slot>
+      </template>
 
       <!-- Reply thread: recursively renders <Comment> for each loaded reply. -->
       <slot
@@ -166,10 +210,10 @@ defineOptions({ name: 'Comment' })
             >
               <Comment
                 :comment="replyItem"
+                :viewer-user-id="viewerUserId"
                 :replies-by-comment="repliesByComment"
                 :reply-has-more="replyHasMore"
                 :reply-expanded="replyExpanded"
-                :can-edit="canEdit"
                 :reaction-types="reactionTypes"
                 @reply="$emit('reply', $event)"
                 @edit="$emit('edit', $event)"
@@ -178,7 +222,45 @@ defineOptions({ name: 'Comment' })
                 @unreact="$emit('unreact', $event)"
                 @toggle-replies="$emit('toggle-replies', $event)"
                 @load-replies="$emit('load-replies', $event)"
-              />
+              >
+                <!-- Forward custom per-comment slots to nested replies. -->
+                <template #comment="{ comment: replyComment }">
+                  <slot
+                    name="comment"
+                    :comment="replyComment"
+                  />
+                </template>
+                <template #comment-author="{ comment: replyComment }">
+                  <slot
+                    name="comment-author"
+                    :comment="replyComment"
+                  />
+                </template>
+                <template #comment-body="{ comment: replyComment }">
+                  <slot
+                    name="comment-body"
+                    :comment="replyComment"
+                  />
+                </template>
+                <template #comment-actions="actionProps">
+                  <slot
+                    name="comment-actions"
+                    v-bind="actionProps"
+                  />
+                </template>
+                <template #reaction="reactionProps">
+                  <slot
+                    name="reaction"
+                    v-bind="reactionProps"
+                  />
+                </template>
+                <template #reply="replyProps">
+                  <slot
+                    name="reply"
+                    v-bind="replyProps"
+                  />
+                </template>
+              </Comment>
             </li>
             <li v-if="hasMore()">
               <button

@@ -158,6 +158,16 @@ describe('<Comments> (Nuxt environment)', () => {
     expect(wrapper.findAll('button').some(b => b.text() === 'Delete')).toBe(false)
   })
 
+  it('shows edit controls for a nested reply only when the viewer owns it', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', userId: 'u1' })] })
+    state.repliesByComment.value = { c1: [makeComment({ id: 'r1', parentId: 'c1', userId: 'u2' })] }
+    state.expanded.value = { c1: true }
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    const nested = wrapper.findAll('article')[1]!
+    expect(nested.findAll('button').some(b => b.text() === 'Edit')).toBe(false)
+  })
+
   it('toggles a reaction through the composable', async () => {
     mockSession({ id: 'u1', name: 'Alice' })
     const state = mockComposable({ comments: [makeComment({ userId: 'u2' })] })

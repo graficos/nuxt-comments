@@ -117,10 +117,6 @@ async function onLoadReplies(c: CommentType) {
   await loadReplies(c.id)
 }
 
-function canEdit(c: CommentType): boolean {
-  return isAuthenticated.value && currentUserId.value === c.userId && !c.deletedAt
-}
-
 /** Sign-in action for the `#login` slot (provider names are consumer-owned). */
 function signIn(provider: string) {
   return session.signIn(provider)
@@ -184,7 +180,7 @@ defineOptions({ name: 'Comments' })
         >
           <Comment
             :comment="c"
-            :can-edit="canEdit(c)"
+            :viewer-user-id="currentUserId"
             :reaction-types="reactionTypes"
             :replies-by-comment="repliesByComment"
             :reply-has-more="replyHasMore"

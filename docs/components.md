@@ -110,7 +110,8 @@ Renders one comment and recursively renders its loaded replies.
 | Prop               | Type                        | Description                            |
 | ------------------ | --------------------------- | -------------------------------------- |
 | `comment`          | `Comment`                   | The comment to render.                 |
-| `canEdit`          | `boolean`                   | Whether the viewer may edit/delete it. |
+| `canEdit`          | `boolean`                   | Whether the viewer may edit/delete this comment. Use at the top level. |
+| `viewerUserId`     | `string`                    | Current viewer id. When set, `canEdit` is derived per comment, so nested replies are checked against their own author. |
 | `reactionTypes`    | `string[]`                  | Reaction types to render.              |
 | `repliesByComment` | `Record<string, Comment[]>` | Loaded replies keyed by comment id.    |
 | `replyHasMore`     | `Record<string, boolean>`   | Whether more replies can be loaded.    |

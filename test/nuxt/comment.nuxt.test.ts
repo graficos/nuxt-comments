@@ -134,6 +134,44 @@ describe('<Comment> (Nuxt environment)', () => {
     })
     expect(wrapper.find('.custom').text()).toBe('slot body')
   })
+
+  it('derives edit/delete per comment from viewerUserId (replies do not inherit)', async () => {
+    const parent = makeComment({ id: 'c1', userId: 'u1' })
+    const reply = makeComment({ id: 'r1', parentId: 'c1', userId: 'u2' })
+    const wrapper = await mountSuspended(Comment, {
+      props: {
+        comment: parent,
+        viewerUserId: 'u1',
+        repliesByComment: { c1: [reply] },
+        replyExpanded: { c1: true },
+      },
+    })
+
+    // Parent is owned by the viewer -> Edit/Delete present.
+    const outer = wrapper.findAll('article')[0]!
+    expect(outer.findAll('button').some(b => b.text() === 'Edit')).toBe(true)
+
+    // Nested reply belongs to u2 -> no Edit/Delete.
+    const nested = wrapper.findAll('article')[1]!
+    expect(nested.findAll('button').some(b => b.text() === 'Edit')).toBe(false)
+    expect(nested.findAll('button').some(b => b.text() === 'Delete')).toBe(false)
+  })
+
+  it('forwards custom slots into nested replies', async () => {
+    const reply = makeComment({ id: 'r1', parentId: 'c1', body: 'nested body' })
+    const wrapper = await mountSuspended(Comment, {
+      props: {
+        comment: makeComment({ body: 'parent body' }),
+        repliesByComment: { c1: [reply] },
+        replyExpanded: { c1: true },
+      },
+      slots: {
+        'comment-body': `<template #comment-body="{ comment }"><div class="custom-body">{{ comment.body }}</div></template>`,
+      },
+    })
+
+    expect(wrapper.findAll('.custom-body').map(n => n.text())).toEqual(['parent body', 'nested body'])
+  })
 })
 
 // Keep the unused ref import referenced for the reactive props contract.

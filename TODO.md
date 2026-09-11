@@ -277,13 +277,19 @@ named slots provided to the top-level comments component should reach nested rep
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Edit/delete affordances are computed per comment, including replies.
-- [ ] Custom slots forward through the recursive comment rendering.
-- [ ] A test asserts a reply authored by another user shows no edit control, and that a custom slot renders
+- [x] Edit/delete affordances are computed per comment, including replies.
+- [x] Custom slots forward through the recursive comment rendering.
+- [x] A test asserts a reply authored by another user shows no edit control, and that a custom slot renders
       for a nested reply.
-- [ ] Docs for the component match the actual slot behavior.
+- [x] Docs for the component match the actual slot behavior.
+
+> **Done:** `Comment` gained `viewerUserId` and derives ownership per comment (a reply no longer inherits the
+> parent's `canEdit`); `Comments` passes the viewer id instead of a boolean. Explicit `defineSlots` types the
+> component's slots and the recursive instance forwards `comment`/`comment-author`/`comment-body`/
+> `comment-actions`/`reaction`/`reply` so custom slots reach nested replies. Added ownership + slot tests and
+> updated `docs/components.md`. Node 47 + workers 82 pass; lint/typecheck clean.
 
 ---
 
