@@ -150,15 +150,21 @@ reply must not blow up as an FK error, and duplicate reactions must not depend o
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `createComment` / `updateComment` do not throw a generic error after the write succeeded (return the
+- [x] `createComment` / `updateComment` do not throw a generic error after the write succeeded (return the
       built row, or use `RETURNING`).
-- [ ] Deleting a comment with a concurrently inserted reply degrades to soft-delete instead of a 500
+- [x] Deleting a comment with a concurrently inserted reply degrades to soft-delete instead of a 500
       (conditional delete + fallback).
-- [ ] Duplicate reactions are handled with `ON CONFLICT ... DO NOTHING` (or equivalent) rather than matching
+- [x] Duplicate reactions are handled with `ON CONFLICT ... DO NOTHING` (or equivalent) rather than matching
       an error-message substring.
-- [ ] Tests cover each of the three behaviors.
+- [x] Tests cover each of the three behaviors.
+
+> **Done:** `createComment` builds its return value from known input (no read-back); `updateComment` uses
+> `UPDATE ... RETURNING *`; `deleteComment` uses a single conditional `DELETE ... AND NOT EXISTS (child)` with
+> a soft-delete fallback; `addReaction` uses `ON CONFLICT(comment_id, user_id, type) DO NOTHING` then selects.
+> Existing soft-delete/duplicate tests cover the fallback and idempotency; new tests cover clean update
+> rejection and unknown-id delete. Workers suite 71 pass.
 
 ---
 

@@ -145,38 +145,56 @@ export class D1CommentsStore implements CommentsStore {
         ts, ts,
       )
       .run()
-    const row = await this.db.prepare('SELECT * FROM comments WHERE id = ?').bind(id).first<CommentRow>()
-    if (!row) throw new Error('failed to read back created comment')
-    return rowToComment(row)
+    // Build the row from known values rather than re-reading it: a failed
+    // read-back would surface an already-committed write as an error.
+    return {
+      id,
+      resource: input.resource,
+      userId: input.userId,
+      parentId: input.parentId ?? null,
+      body: input.body,
+      authorName: input.authorName ?? null,
+      authorImage: input.authorImage ?? null,
+      createdAt: ts,
+      updatedAt: ts,
+      deletedAt: null,
+      deletedBy: null,
+    }
   }
 
   async updateComment(id: string, body: string): Promise<Comment> {
     const ts = now()
-    await this.db.prepare('UPDATE comments SET body = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL')
+    // RETURNING makes the write and the read one statement, so a successful
+    // update can never be reported as a failure.
+    const row = await this.db.prepare(
+      'UPDATE comments SET body = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL RETURNING *',
+    )
       .bind(body, ts, id)
-      .run()
-    const row = await this.db.prepare('SELECT * FROM comments WHERE id = ?').bind(id).first<CommentRow>()
-    if (!row) throw new Error('comment not found after update')
+      .first<CommentRow>()
+    if (!row) throw new Error('comment not found')
     return rowToComment(row)
   }
 
   async deleteComment(id: string, policy: DeletionPolicy): Promise<void> {
     const ts = now()
-    const hasReplies = await this.hasReplies(id)
-    if (hasReplies) {
-      // Soft-delete: preserve the thread structure.
-      await this.db.prepare(
-        'UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ?',
-      )
-        .bind(ts, policy, ts, id)
-        .run()
-      // Reactions on the soft-deleted comment are removed (no reactions against a tombstone).
-      await this.db.prepare('DELETE FROM comment_reactions WHERE comment_id = ?').bind(id).run()
-    }
-    else {
+    // Delete only when the comment has no replies. The NOT EXISTS is part of
+    // the same statement, so a reply inserted concurrently cannot turn this
+    // into an FK RESTRICT error.
+    const res = await this.db.prepare(
+      `DELETE FROM comments WHERE id = ?
+         AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = ?)`,
+    ).bind(id, id).run()
+    if ((res.meta.changes ?? 0) > 0) {
       // Hard-delete (cascades to comment_reactions via FK ON DELETE CASCADE).
-      await this.db.prepare('DELETE FROM comments WHERE id = ?').bind(id).run()
+      return
     }
+    // Has replies (or was already removed): keep a tombstone and clear reactions.
+    await this.db.prepare(
+      'UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
+    )
+      .bind(ts, policy, ts, id)
+      .run()
+    await this.db.prepare('DELETE FROM comment_reactions WHERE comment_id = ?').bind(id).run()
   }
 
   async hasReplies(commentId: string): Promise<boolean> {
@@ -216,28 +234,22 @@ export class D1CommentsStore implements CommentsStore {
   async addReaction(input: CreateReactionInput): Promise<Reaction> {
     const id = ulid()
     const ts = now()
-    try {
-      await this.db.prepare(
-        `INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-        .bind(id, input.commentId, input.userId, input.type, ts)
-        .run()
-    }
-    catch (err: unknown) {
-      // SQLite UNIQUE constraint violation → return the existing reaction.
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('UNIQUE constraint')) {
-        const existing = await this.db.prepare(
-          'SELECT * FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND type = ?',
-        )
-          .bind(input.commentId, input.userId, input.type)
-          .first<ReactionRow>()
-        if (existing) return rowToReaction(existing)
-      }
-      throw err
-    }
-    return { id, commentId: input.commentId, userId: input.userId, type: input.type, createdAt: ts }
+    // ON CONFLICT makes a duplicate reaction a no-op without depending on the
+    // SQLite error-message text.
+    await this.db.prepare(
+      `INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(comment_id, user_id, type) DO NOTHING`,
+    )
+      .bind(id, input.commentId, input.userId, input.type, ts)
+      .run()
+    const row = await this.db.prepare(
+      'SELECT * FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND type = ?',
+    )
+      .bind(input.commentId, input.userId, input.type)
+      .first<ReactionRow>()
+    if (!row) throw new Error('failed to read back reaction')
+    return rowToReaction(row)
   }
 
   async removeReaction(commentId: string, userId: string, type: string): Promise<void> {

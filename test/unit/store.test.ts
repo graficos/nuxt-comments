@@ -78,6 +78,19 @@ describe('D1CommentsStore', () => {
     expect(got).toBeNull()
   })
 
+  it('updateComment rejects cleanly when the comment is missing or soft-deleted', async () => {
+    await expect(store.updateComment('does-not-exist', 'x')).rejects.toThrow('comment not found')
+
+    const top = await store.createComment({ resource: '/blog/upd2', userId: 'u1', body: 'p' })
+    await store.createComment({ resource: '/blog/upd2', userId: 'u2', body: 'r', parentId: top.id })
+    await store.deleteComment(top.id, 'author')
+    await expect(store.updateComment(top.id, 'x')).rejects.toThrow('comment not found')
+  })
+
+  it('deleteComment is a no-op for an unknown id', async () => {
+    await expect(store.deleteComment('missing-id', 'author')).resolves.toBeUndefined()
+  })
+
   it('soft-deletes a comment that has replies, preserving the thread', async () => {
     const top = await store.createComment({ resource: '/blog/soft', userId: 'u1', body: 'parent' })
     await store.createComment({ resource: '/blog/soft', userId: 'u2', body: 'child', parentId: top.id })
