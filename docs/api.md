@@ -124,9 +124,11 @@ Deletion is deliberate and documented. Permanent destruction only happens where 
 
 | Trigger | Behavior |
 |---|---|
-| Author deletes own comment **with replies** | **Soft-delete**: `body` is set to `NULL`, `deleted_at`/`deleted_by='author'` are set, and reactions on it are removed. The row remains as a `[deleted]` tombstone so the thread survives. |
+| Author deletes own comment **with replies** | **Soft-delete**: `body` is set to `NULL`, `deleted_at`/`deleted_by='author'` are set, and reactions on it are removed. The row remains as a `[deleted]` tombstone so the thread survives. The author snapshot is retained until account deletion. |
 | Author deletes own comment **without replies** | **Hard-delete**: the row is removed. Reactions cascade via the foreign key. |
-| Admin `deleteCommentsUser(userId)` | Hard-deletes **all** of the user's reactions; **hard-deletes** the user's comments that have no replies; **soft-deletes** the user's comments that have replies (`deleted_by='user-deletion'`) and clears their author snapshots. Returns `{ comments, reactions }` counts. |
+| Admin `deleteCommentsUser(userId)` | Clears `author_name`/`author_image` on **every** comment the user owns (including comments the user had already soft-deleted), hard-deletes **all** of the user's reactions, **hard-deletes** the user's comments that have no replies, and **soft-deletes** the user's comments that have replies (`deleted_by='user-deletion'`). Returns `{ comments, reactions }` counts; `comments` is rows hard-deleted plus rows soft-deleted by this call. |
+
+No display name or avatar survives account deletion, regardless of the comment's prior delete state.
 
 Admin user deletion is a **server-only utility**, not an HTTP endpoint:
 

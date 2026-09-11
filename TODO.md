@@ -52,12 +52,19 @@ including comments the user had already soft-deleted before the account deletion
 
 **Blocked by:** 01 (same deletion path; do the structural fix first).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Author name/image are cleared for every comment owned by the user, regardless of prior delete state.
-- [ ] A test seeds a user with an author-soft-deleted comment and asserts the snapshot is null after
+- [x] Author name/image are cleared for every comment owned by the user, regardless of prior delete state.
+- [x] A test seeds a user with an author-soft-deleted comment and asserts the snapshot is null after
       `deleteCommentsUser`.
-- [ ] The behavior is stated in the deletion-policy docs.
+- [x] The behavior is stated in the deletion-policy docs.
+
+> **Done:** Added an unconditional `UPDATE comments SET author_name = NULL, author_image = NULL WHERE
+> user_id = ?` as the second statement of the deletion batch, so snapshots are scrubbed even for rows
+> already soft-deleted. Existing tombstone metadata (`deleted_at`/`deleted_by`) is preserved. Admin API
+> test seeds an author-soft-deleted thread parent and asserts both snapshots are null afterward. Docs
+> updated in `docs/api.md` and the `deleteCommentsUser` JSDoc. Workers suite 62 pass, lint and typecheck
+> clean.
 
 ---
 

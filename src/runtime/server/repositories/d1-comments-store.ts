@@ -235,16 +235,20 @@ export class D1CommentsStore implements CommentsStore {
     // number of parameters, so this scales past D1's 100-bound-parameter
     // limit. Statements run in order within the batch:
     //   1. drop the user's reactions;
-    //   2. soft-delete (and scrub) comments that anchor a thread;
-    //   3. after (2), every remaining active comment is a leaf -> hard-delete.
+    //   2. scrub author snapshots from every comment the user owns,
+    //      including ones already soft-deleted before account deletion;
+    //   3. soft-delete comments that anchor a thread;
+    //   4. after (3), every remaining active comment is a leaf -> hard-delete.
     // A failure anywhere rolls the whole batch back, so the account is never
     // left half-erased.
-    const [reactions, preserved, removed] = await this.db.batch([
+    const [reactions, , preserved, removed] = await this.db.batch([
       this.db.prepare('DELETE FROM comment_reactions WHERE user_id = ?').bind(userId),
       this.db.prepare(
+        'UPDATE comments SET author_name = NULL, author_image = NULL WHERE user_id = ?',
+      ).bind(userId),
+      this.db.prepare(
         `UPDATE comments
-           SET body = NULL, deleted_at = ?, deleted_by = 'user-deletion',
-               author_name = NULL, author_image = NULL, updated_at = ?
+           SET body = NULL, deleted_at = ?, deleted_by = 'user-deletion', updated_at = ?
          WHERE user_id = ? AND deleted_at IS NULL
            AND EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
       ).bind(ts, ts, userId),

@@ -5,11 +5,13 @@ import type { DeleteUserDataResult } from '../repositories/comments-store'
 /**
  * Admin operation: delete a user and all their comments-domain data.
  *
- * Deletion policy (documented in the README):
+ * Deletion policy (documented in docs/api.md):
+ *   - Author snapshots (`author_name`/`author_image`) are cleared on every
+ *     comment the user owns, including comments already soft-deleted before
+ *     account deletion, so no display name or avatar survives.
  *   - Reactions: hard-deleted.
  *   - Comments with replies: soft-deleted (`deleted_by='user-deletion'`),
- *     `author_name`/`author_image` nulled, so the thread is preserved
- *     and the author renders as `[deleted author]`.
+ *     so the thread is preserved and the author renders as `[deleted author]`.
  *   - Comments without replies: hard-deleted.
  *
  * This is a **server-only** utility. It is intentionally NOT exposed

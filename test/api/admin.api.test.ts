@@ -65,6 +65,37 @@ describe('deleteCommentsUser (admin service)', () => {
     expect(await store.getUserReactions('victim', [target.id])).toHaveLength(0)
   })
 
+  it('scrubs author snapshots from comments the user had already soft-deleted', async () => {
+    const store = getCommentsStore(createEventStub())
+    // A soft-deleted author comment only exists when it anchors a thread.
+    const parent = await store.createComment({
+      resource: 'admin/pii',
+      userId: 'pii-victim',
+      body: 'parent',
+      authorName: 'Pii Victim',
+      authorImage: 'https://img.test/pii.png',
+    })
+    await store.createComment({ resource: 'admin/pii', userId: 'other', body: 'child', parentId: parent.id })
+    await store.deleteComment(parent.id, 'author')
+
+    const before = await store.getComment(parent.id)
+    expect(before!.deletedAt).not.toBeNull()
+    expect(before!.authorName).toBe('Pii Victim')
+
+    await callAdmin('pii-victim')
+
+    const after = await store.getComment(parent.id)
+    expect(after).not.toBeNull()
+    expect(after!.authorName).toBeNull()
+    expect(after!.authorImage).toBeNull()
+    // The existing tombstone metadata is preserved, not overwritten.
+    expect(after!.deletedBy).toBe('author')
+
+    const replies = await store.listReplies(parent.id, { limit: 10 })
+    expect(replies.items).toHaveLength(1)
+    expect(replies.items[0]!.body).toBe('child')
+  })
+
   it('rejects an empty userId', async () => {
     await expect(deleteCommentsUser(createEventStub(), '')).rejects.toThrow(/userId is required/)
   })
