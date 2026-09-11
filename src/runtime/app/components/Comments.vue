@@ -1,0 +1,257 @@
+<script setup lang="ts">
+import { ref, computed, toRef } from 'vue'
+import { useRuntimeConfig } from '#imports'
+import { useComments } from '../composables/useComments'
+import { useCommentsSession } from '../composables/useCommentsSession'
+import Comment from './Comment.vue'
+import CommentComposer from './CommentComposer.vue'
+import CommentAuth from './CommentAuth.vue'
+import type { Comment as CommentType } from '../../shared/types'
+
+/** Slots forwarded from <Comments> to each nested <Comment>. */
+const commentSlots = ['comment', 'comment-author', 'comment-body', 'comment-actions', 'reaction', 'reply'] as const
+
+const props = defineProps<{
+  /** Opaque resource identifier (e.g. '/blog/my-post' or 'blog:my-post'). */
+  resource: string
+  /** Initial page size. */
+  limit?: number
+  /** Auth providers offered by the consumer (provider names are consumer-owned). */
+  providers?: string[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'create', comment: CommentType): void
+  (e: 'update', comment: CommentType): void
+  (e: 'delete', comment: CommentType): void
+  (e: 'reply', comment: CommentType): void
+  (e: 'react', payload: { comment: CommentType, type: string }): void
+  (e: 'unreact', payload: { comment: CommentType, type: string }): void
+  (e: 'error', error: Error): void
+}>()
+
+const config = useRuntimeConfig()
+const reactionTypes = computed(() => config.public.comments?.reactions?.types ?? ['like'])
+
+const {
+  comments,
+  loading,
+  error,
+  hasMore,
+  repliesByComment,
+  expanded,
+  replyHasMore,
+  loadReplies,
+  toggleReplies,
+  fetchMore,
+  refresh,
+  createComment,
+  reply,
+  updateComment,
+  deleteComment,
+  react,
+  unreact,
+} = useComments(toRef(props, 'resource'), { limit: props.limit })
+
+const session = useCommentsSession()
+const isAuthenticated = computed(() => !!session.user.value)
+const currentUserId = computed(() => session.user.value?.id)
+
+// Reply / edit state.
+const replyingTo = ref<CommentType | null>(null)
+const editing = ref<CommentType | null>(null)
+const submitting = ref(false)
+
+async function onSubmit(body: string) {
+  if (editing.value) {
+    const updated = await updateComment(editing.value.id, body)
+    emit('update', updated)
+    editing.value = null
+    return
+  }
+  if (replyingTo.value) {
+    const created = await reply(replyingTo.value.id, body)
+    emit('reply', created)
+    replyingTo.value = null
+    // Reload the parent's replies so the new reply appears.
+    if (expanded.value[created.parentId ?? '']) {
+      await loadReplies(created.parentId!)
+    }
+    else {
+      await toggleReplies(created.parentId!)
+    }
+    return
+  }
+  const created = await createComment(body)
+  emit('create', created)
+  await refresh()
+}
+
+function startReply(c: CommentType) {
+  replyingTo.value = c
+  editing.value = null
+}
+function startEdit(c: CommentType) {
+  editing.value = c
+  replyingTo.value = null
+}
+async function onDelete(c: CommentType) {
+  await deleteComment(c.id)
+  emit('delete', c)
+  await refresh()
+}
+async function onReact(payload: { comment: CommentType, type: string }) {
+  await react(payload.comment.id, payload.type)
+  emit('react', payload)
+  await refresh()
+}
+async function onUnreact(payload: { comment: CommentType, type: string }) {
+  await unreact(payload.comment.id, payload.type)
+  emit('unreact', payload)
+  await refresh()
+}
+async function onToggleReplies(c: CommentType) {
+  await toggleReplies(c.id)
+}
+async function onLoadReplies(c: CommentType) {
+  await loadReplies(c.id)
+}
+
+function canEdit(c: CommentType): boolean {
+  return isAuthenticated.value && currentUserId.value === c.userId && !c.deletedAt
+}
+
+/** Sign-in action for the `#login` slot (provider names are consumer-owned). */
+function signIn(provider: string) {
+  return session.signIn(provider)
+}
+
+defineOptions({ name: 'Comments' })
+</script>
+
+<template>
+  <section
+    aria-label="Comments"
+    data-comments-root
+    :data-resource="props.resource"
+  >
+    <slot
+      name="header"
+      :resource="props.resource"
+      :count="comments.length"
+    >
+      <h2>Comments</h2>
+    </slot>
+
+    <slot
+      v-if="loading && comments.length === 0"
+      name="loading"
+    >
+      <p
+        aria-busy="true"
+        role="status"
+      >
+        Loading comments…
+      </p>
+    </slot>
+
+    <slot
+      v-else-if="error"
+      name="error"
+      :error="error"
+    >
+      <p role="alert">
+        Failed to load comments.
+      </p>
+    </slot>
+
+    <slot
+      v-else-if="comments.length === 0"
+      name="empty"
+    >
+      <p>No comments yet.</p>
+    </slot>
+
+    <slot
+      v-else
+      name="list"
+      :comments="comments"
+    >
+      <ol data-comments-list>
+        <li
+          v-for="c in comments"
+          :key="c.id"
+        >
+          <Comment
+            :comment="c"
+            :can-edit="canEdit(c)"
+            :reaction-types="reactionTypes"
+            :replies-by-comment="repliesByComment"
+            :reply-has-more="replyHasMore"
+            :reply-expanded="expanded"
+            @reply="startReply"
+            @edit="startEdit"
+            @delete="onDelete"
+            @react="onReact"
+            @unreact="onUnreact"
+            @toggle-replies="onToggleReplies"
+            @load-replies="onLoadReplies"
+          >
+            <!-- Forward the per-comment customization slots to each <Comment>. -->
+            <template
+              v-for="name in commentSlots"
+              #[name]="slotProps"
+              :key="name"
+            >
+              <slot
+                :name="name"
+                v-bind="slotProps ?? {}"
+              />
+            </template>
+          </Comment>
+        </li>
+      </ol>
+    </slot>
+
+    <slot
+      v-if="hasMore"
+      name="load-more"
+      :fetch-more="fetchMore"
+    >
+      <button
+        type="button"
+        :disabled="loading"
+        @click="fetchMore"
+      >
+        Load more
+      </button>
+    </slot>
+
+    <slot
+      v-if="isAuthenticated"
+      name="composer"
+      :submit="onSubmit"
+      :is-submitting="submitting"
+    >
+      <CommentComposer
+        :is-submitting="submitting"
+        :placeholder="replyingTo ? `Reply to ${replyingTo.authorName ?? 'comment'}...` : 'Write a comment...'"
+        @submit="onSubmit"
+      />
+    </slot>
+
+    <slot
+      v-else
+      name="login"
+      :sign-in="signIn"
+      :providers="props.providers"
+    >
+      <CommentAuth :providers="props.providers" />
+    </slot>
+
+    <slot
+      name="footer"
+      :resource="props.resource"
+    />
+  </section>
+</template>

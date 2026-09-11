@@ -1,0 +1,23 @@
+node_modules
+dist
+.nuxt
+.output
+.data
+.env
+.env.*
+!.env.example
+.wrangler
+playground/.nuxt
+playground/.output
+playground/.data
+playground/.wrangler
+coverage
+*.log
+*.tgz
+.DS_Store
+
+# Better Auth scaffolds these into the module's root when `dev:prepare`
+# loads the module (the real files live in playground/).
+.nuxtrc
+auth.config.ts
+server/auth.config.ts

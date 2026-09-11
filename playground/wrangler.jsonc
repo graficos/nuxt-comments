@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nuxt-comments-playground",
+  "compatibility_date": "2025-01-01",
+  "main": "./.output/server/index.mjs",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "playground-comments",
+      "database_id": "local-playground-comments",
+      "migrations_dir": "../migrations"
+    }
+  ]
+}
