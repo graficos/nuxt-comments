@@ -91,7 +91,12 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
 
-Providers are configured in `playground/server/auth.config.ts`. Callback URLs follow Better Auth's convention, e.g. `http://localhost:3000/api/auth/callback/github`.
+Providers are configured in `playground/server/auth.config.ts`. Callback URLs follow Better Auth's convention:
+
+- GitHub: `http://localhost:3000/api/auth/callback/github`
+- Google: `http://localhost:3000/api/auth/callback/google`
+
+Register those callback URLs when you create the OAuth app/credentials. Step-by-step instructions for both providers are in [../docs/authentication.md#obtaining-provider-credentials](../docs/authentication.md#obtaining-provider-credentials).
 
 The playground's login buttons are text-only and live in the page/slot markup — **the package ships no provider logos or assets**, by design.
 

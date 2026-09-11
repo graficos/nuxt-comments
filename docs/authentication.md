@@ -50,13 +50,36 @@ export default defineClientAuth({})
 `.env`:
 
 ```bash
+# Generate with: openssl rand -base64 32
 NUXT_BETTER_AUTH_SECRET=<at least 32 random characters>
 NUXT_PUBLIC_SITE_URL=http://localhost:3000   # required on Cloudflare Workers
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 ```
 
 OAuth callback URLs are Better Auth's concern, e.g. `https://your-site.com/api/auth/callback/github`. The comments package contains no OAuth credentials and no callback routes.
+
+### Obtaining provider credentials
+
+Both providers redirect back through Better Auth at `/api/auth/callback/<provider>`, so register that exact URL with the provider. Credentials are only needed for the providers you enable — email/password needs none.
+
+**GitHub**
+
+1. GitHub -> **Settings** -> **Developer settings** -> **OAuth Apps** -> **New OAuth App**.
+2. Homepage URL: `http://localhost:3000`. Authorization callback URL: `http://localhost:3000/api/auth/callback/github`.
+3. Copy the **Client ID**, then **Generate a new client secret**.
+4. Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+5. For production, create a second OAuth app (or update the callback URL) with `https://your-site.com/api/auth/callback/github`.
+
+**Google**
+
+1. Google Cloud Console -> **APIs & Services** -> **OAuth consent screen**: configure an External app (test mode is fine for local dev) and add your account as a test user.
+2. **APIs & Services** -> **Credentials** -> **Create credentials** -> **OAuth client ID** -> **Web application**.
+3. Authorized JavaScript origins: `http://localhost:3000` (add your production origin later).
+4. Authorized redirect URIs: `http://localhost:3000/api/auth/callback/google`.
+5. Copy the **Client ID** and **Client secret** into `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 
 ## What the comments module uses
 
