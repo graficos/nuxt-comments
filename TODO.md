@@ -177,14 +177,20 @@ default in-memory rate limiter must not grow without bound or trust a spoofable 
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `getViewer` logs the failure before returning anonymous; only the known "module unavailable" case
+- [x] `getViewer` logs the failure before returning anonymous; only the known "module unavailable" case
       degrades silently.
-- [ ] The in-memory limiter evicts expired buckets once it passes a size cap.
-- [ ] The client-IP source is documented and only trusts a forwarded header behind a configured trusted
+- [x] The in-memory limiter evicts expired buckets once it passes a size cap.
+- [x] The client-IP source is documented and only trusts a forwarded header behind a configured trusted
       proxy; `cf-connecting-ip` is preferred.
-- [ ] Tests cover the limiter boundary (allow N, reject N+1, window reset) and the IP-selection policy.
+- [x] Tests cover the limiter boundary (allow N, reject N+1, window reset) and the IP-selection policy.
+
+> **Done:** `getViewer` now logs the caught error before returning anonymous. `InMemoryRateLimiter` gained a
+> bounded key map (expired-then-oldest eviction) and an explicit `trustProxy` option; `resolveClientIp`
+> prefers `cf-connecting-ip` and only reads `x-forwarded-for` when trusted. Added the `rateLimiterTrustProxy`
+> module option, wired through runtime config, plus `test/unit/rate-limiter.test.ts` (boundary + IP policy).
+> Workers suite 78 pass.
 
 ---
 

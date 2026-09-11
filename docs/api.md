@@ -113,7 +113,7 @@ Client code reads the code via `error.data.code` (the outer object is h3's envel
 
 The service calls an abuse-prevention extension point before every mutation, with scopes `comments:create`, `comments:reply`, `comments:update`, `comments:delete`, `comments:react`.
 
-- `rateLimiter: 'memory'` (default) uses an in-memory limiter (30 mutations/minute per IP). **It is per-isolate and not suitable for multi-isolate production.**
+- `rateLimiter: 'memory'` (default) uses an in-memory limiter (30 mutations/minute per IP). **It is per-isolate and not suitable for multi-isolate production.** The client IP comes from `cf-connecting-ip`; `x-forwarded-for` is only used when `rateLimiterTrustProxy` is enabled behind a trusted proxy.
 - `rateLimiter: 'none'` disables it.
 
 For production, implement the `RateLimiter` port with Cloudflare-native rate limiting (WAF rules or the Workers Rate Limiting binding) — the domain never depends on the limiter implementation. See [adapters.md](./adapters.md).

@@ -12,7 +12,9 @@ export function useCommentsService(event: H3Event): CommentsService {
   const store = getCommentsStore(event)
   const rc = useRuntimeConfig(event)
   const config = serviceConfigFromRuntimeConfig(rc.public.comments ?? {})
-  const limiter = getRateLimiter(rc.comments?.rateLimiter ?? 'memory')
+  const limiter = getRateLimiter(rc.comments?.rateLimiter ?? 'memory', {
+    trustProxy: rc.comments?.rateLimiterTrustProxy ?? false,
+  })
   return createCommentsService({
     store,
     getViewer: () => getViewer(event),

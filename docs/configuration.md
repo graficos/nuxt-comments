@@ -34,6 +34,7 @@ export default defineNuxtConfig({
       preserveThreadsWithReplies: true,
     },
     rateLimiter: 'memory',
+    rateLimiterTrustProxy: false,
   },
 })
 ```
@@ -50,6 +51,7 @@ export default defineNuxtConfig({
 | `components.prefix` | `string` | `'Nuxt'` | Component name prefix. Set to `''` for `<Comments>`, `<Comment>`, …. |
 | `softDelete.preserveThreadsWithReplies` | `boolean` | `true` | When a comment with replies is deleted it becomes a `[deleted]` tombstone instead of destroying the thread. |
 | `rateLimiter` | `'none' \| 'memory'` | `'memory'` | Mutation rate limiting. `'memory'` is a per-isolate in-memory limiter (single-isolate only). |
+| `rateLimiterTrustProxy` | `boolean` | `false` | Trust `x-forwarded-for` for rate-limit identity. Enable only behind a trusted proxy; otherwise `cf-connecting-ip` is used. |
 
 ### Component naming
 

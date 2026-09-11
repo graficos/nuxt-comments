@@ -25,8 +25,10 @@ export async function getViewer(event: H3Event): Promise<ViewerInfo | null> {
       image: session.user.image ?? null,
     }
   }
-  catch {
-    // If better-auth isn't configured/available, treat as anonymous.
+  catch (err) {
+    // Surface the failure instead of silently treating an auth-backend outage
+    // as an anonymous request; public reads still proceed as anonymous.
+    console.error('[nuxt-comments] failed to resolve session; treating request as anonymous:', err)
     return null
   }
 }

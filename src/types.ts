@@ -31,11 +31,18 @@ export interface ModuleOptions {
   }
   /** Rate limiter strategy. 'memory' is single-isolate only. @default 'memory' */
   rateLimiter?: 'none' | 'memory'
+  /**
+   * Trust `x-forwarded-for` for rate-limit identity. Enable only when the
+   * app runs behind a trusted proxy; otherwise `cf-connecting-ip` is used.
+   * @default false
+   */
+  rateLimiterTrustProxy?: boolean
 }
 
 export interface RuntimeConfigComments {
   databaseBinding: string
   rateLimiter: 'none' | 'memory'
+  rateLimiterTrustProxy: boolean
 }
 
 export interface RuntimeConfigPublicComments {

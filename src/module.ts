@@ -64,6 +64,7 @@ export default defineNuxtModule<ModuleOptions>({
       {
         databaseBinding: options.database?.binding ?? 'DB',
         rateLimiter: options.rateLimiter ?? 'memory',
+        rateLimiterTrustProxy: options.rateLimiterTrustProxy ?? false,
       },
     ) as NonNullable<typeof nuxt.options.runtimeConfig.comments>
 
