@@ -3,7 +3,18 @@
   "version": "0.0.0",
   "description": "Embeddable, unstyled comments system for Nuxt 4, backed by Cloudflare D1 and authenticated via @nuxtjs/better-auth.",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/graficos/nuxt-comments.git"
+  },
+  "homepage": "https://github.com/graficos/nuxt-comments#readme",
+  "bugs": {
+    "url": "https://github.com/graficos/nuxt-comments/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "keywords": [
     "nuxt",
     "nuxt-module",
@@ -27,6 +38,7 @@
   },
   "main": "./dist/module.mjs",
   "module": "./dist/module.mjs",
+  "types": "./dist/types.d.mts",
   "typesVersions": {
     "*": {
       ".": [
@@ -51,6 +63,7 @@
   ],
   "scripts": {
     "prepack": "nuxt-module-build build",
+    "prepublishOnly": "pnpm run lint && pnpm run test",
     "dev": "pnpm run dev:prepare && nuxt dev playground",
     "dev:build": "nuxt build playground",
     "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
@@ -97,6 +110,9 @@
     "@nuxtjs/better-auth": {
       "optional": false
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "volta": {
     "node": "22.23.2"

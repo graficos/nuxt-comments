@@ -435,13 +435,18 @@ tree or history, all fixes landed, and the full local gate suite is green on a c
 
 **Blocked by:** None.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `LICENSE` is restored as Apache-2.0 (per the earlier request).
-- [ ] `package.json` `"license"` is changed to `"Apache-2.0"`.
-- [ ] No other file references the old MIT declaration.
-- [ ] The packed tarball includes `LICENSE` (npm includes it automatically when present at the root, but
+- [x] `LICENSE` is restored as Apache-2.0 (per the earlier request).
+- [x] `package.json` `"license"` is changed to `"Apache-2.0"`.
+- [x] No other file references the old MIT declaration.
+- [x] The packed tarball includes `LICENSE` (npm includes it automatically when present at the root, but
       verify).
+
+> **Done:** Added the canonical Apache-2.0 `LICENSE`; `package.json` now declares `"license": "Apache-2.0"`.
+> Also completed npm publish metadata: `repository`/`homepage`/`bugs`, top-level `types`, `engines.node >=20`,
+> `publishConfig.access: public`, a `prepublishOnly` lint+test gate, and a minimal `.npmrc`. Packed tarball
+> includes `LICENSE`; no other file mentions MIT.
 
 ---
 
