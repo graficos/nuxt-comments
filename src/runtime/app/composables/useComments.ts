@@ -61,7 +61,26 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   const hasMore = ref(false)
   const nextCursor = ref<string | null>(null)
 
+  // Lazy reply-thread state (per comment id).
+  const repliesByComment = ref<Record<string, Comment[]>>({})
+  const expanded = ref<Record<string, boolean>>({})
+  const replyCursors = ref<Record<string, string | null>>({})
+  const replyHasMore = ref<Record<string, boolean>>({})
+
+  // Guards against out-of-order responses and duplicate requests.
+  let loadSeq = 0
+  let resourceEpoch = 0
+  const repliesInFlight = new Set<string>()
+
+  function resetThreadState() {
+    repliesByComment.value = {}
+    expanded.value = {}
+    replyCursors.value = {}
+    replyHasMore.value = {}
+  }
+
   async function load(reset = false) {
+    const seq = ++loadSeq
     loading.value = true
     error.value = null
     try {
@@ -76,45 +95,57 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
           cursor: reset ? undefined : nextCursor.value,
         },
       })
+      // A newer load started while this one was in flight: drop the stale result.
+      if (seq !== loadSeq) return
       if (reset) comments.value = []
       comments.value = [...comments.value, ...payload.items]
       nextCursor.value = payload.nextCursor
       hasMore.value = payload.hasMore
     }
     catch (err) {
+      if (seq !== loadSeq) return
       error.value = err instanceof Error ? err : createError(String(err))
     }
     finally {
-      loading.value = false
+      if (seq === loadSeq) loading.value = false
     }
   }
 
-  // Initial load + reload when the resource changes.
-  watch(resourceRef, () => load(true), { immediate: true })
-
-  // Lazy reply-thread state (per comment id).
-  const repliesByComment = ref<Record<string, Comment[]>>({})
-  const expanded = ref<Record<string, boolean>>({})
-  const replyCursors = ref<Record<string, string | null>>({})
-  const replyHasMore = ref<Record<string, boolean>>({})
+  // Initial load + reload (and thread reset) when the resource changes.
+  watch(resourceRef, () => {
+    resourceEpoch++
+    resetThreadState()
+    void load(true)
+  }, { immediate: true })
 
   async function loadReplies(commentId: string) {
-    const payload = await $fetch<{
-      items: Comment[]
-      nextCursor: string | null
-      hasMore: boolean
-    }>(`${API_BASE}/threads/${encodeURIComponent(commentId)}/replies`, {
-      query: {
-        limit: defaultLimit,
-        cursor: replyCursors.value[commentId] ?? undefined,
-      },
-    })
-    repliesByComment.value = {
-      ...repliesByComment.value,
-      [commentId]: [...(repliesByComment.value[commentId] ?? []), ...payload.items],
+    // Ignore a second request for a thread that is already loading.
+    if (repliesInFlight.has(commentId)) return
+    repliesInFlight.add(commentId)
+    const epoch = resourceEpoch
+    try {
+      const payload = await $fetch<{
+        items: Comment[]
+        nextCursor: string | null
+        hasMore: boolean
+      }>(`${API_BASE}/threads/${encodeURIComponent(commentId)}/replies`, {
+        query: {
+          limit: defaultLimit,
+          cursor: replyCursors.value[commentId] ?? undefined,
+        },
+      })
+      // The resource changed while this was in flight: drop the stale result.
+      if (epoch !== resourceEpoch) return
+      repliesByComment.value = {
+        ...repliesByComment.value,
+        [commentId]: [...(repliesByComment.value[commentId] ?? []), ...payload.items],
+      }
+      replyCursors.value = { ...replyCursors.value, [commentId]: payload.nextCursor }
+      replyHasMore.value = { ...replyHasMore.value, [commentId]: payload.hasMore }
     }
-    replyCursors.value = { ...replyCursors.value, [commentId]: payload.nextCursor }
-    replyHasMore.value = { ...replyHasMore.value, [commentId]: payload.hasMore }
+    finally {
+      repliesInFlight.delete(commentId)
+    }
   }
 
   async function toggleReplies(commentId: string) {
@@ -123,7 +154,10 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
       return
     }
     if (!repliesByComment.value[commentId]) {
+      const epoch = resourceEpoch
       await loadReplies(commentId)
+      // Don't expand a thread on a resource that has since changed.
+      if (epoch !== resourceEpoch) return
     }
     expanded.value = { ...expanded.value, [commentId]: true }
   }

@@ -254,12 +254,17 @@ load and no in-flight guard on reply loading, and thread state is not reset when
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A slow in-flight load cannot overwrite a newer load's comments/cursor/hasMore.
-- [ ] `loadReplies` is not entered twice concurrently for the same comment.
-- [ ] Reply/expansion state resets when the resource changes.
-- [ ] Tests cover a rapid resource switch (later resource wins) and a double toggle (single append).
+- [x] A slow in-flight load cannot overwrite a newer load's comments/cursor/hasMore.
+- [x] `loadReplies` is not entered twice concurrently for the same comment.
+- [x] Reply/expansion state resets when the resource changes.
+- [x] Tests cover a rapid resource switch (later resource wins) and a double toggle (single append).
+
+> **Done:** `load()` carries a monotonically increasing sequence and drops stale responses; `loadReplies` has
+> a per-comment in-flight set and a resource epoch (results from a superseded resource are dropped); the
+> resource watch resets all thread state. Added `test/nuxt/use-comments.nuxt.test.ts` covering stale-load,
+> double-toggle, and reset. Node suite 44 pass; lint/typecheck clean.
 
 ---
 
