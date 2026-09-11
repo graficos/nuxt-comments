@@ -107,7 +107,7 @@ Errors use h3's envelope, with the package's code in `data`:
 | `429` | `rate_limited` | Mutation rate limit exceeded. |
 | `500` | `internal` | Unexpected error. Original error is logged server-side; no database details leak to clients. |
 
-Client code reads the code via `error.data.data.code` (the outer `data` is h3's envelope, the inner is the package payload).
+Client code reads the code via `error.data.code` (the outer object is h3's envelope, `data` is the package payload).
 
 ## Rate limiting
 

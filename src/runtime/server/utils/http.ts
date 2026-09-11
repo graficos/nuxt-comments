@@ -12,8 +12,9 @@ function toH3(code: string, status: number, message: string): H3Error {
 
 /**
  * Map a `CommentsApiError` to an h3 error with the consistent public
- * shape `{ error: { code, message } }`. Unknown errors are logged and
- * surfaced as a generic 500 (no internal details leak to clients).
+ * envelope `{ statusCode, statusMessage, message, data: { code, message } }`.
+ * Unknown errors are logged and surfaced as a generic 500 (no internal
+ * details leak to clients).
  *
  * This lives at the API boundary; the domain layer never imports h3.
  */

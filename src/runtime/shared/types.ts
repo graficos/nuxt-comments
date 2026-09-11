@@ -59,9 +59,13 @@ export interface Paginated<T> {
 
 export type DeletionPolicy = 'author' | 'user-deletion'
 
+/** Error envelope returned by the comments API (h3 shape, package code in `data`). */
 export interface CommentsError {
-  error: {
-    code: string
+  statusCode: number
+  statusMessage: string
+  message: string
+  data: {
+    code: CommentsErrorCode
     message: string
   }
 }

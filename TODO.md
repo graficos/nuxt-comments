@@ -127,13 +127,17 @@ the wrong shape.
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The exported error type matches the emitted envelope, or is removed if it is not a supported surface.
-- [ ] The `toH3Error` doc comment matches the emitted shape.
-- [ ] A test pins the envelope shape (status code, `data.code`) for at least one domain error and the
+- [x] The exported error type matches the emitted envelope, or is removed if it is not a supported surface.
+- [x] The `toH3Error` doc comment matches the emitted shape.
+- [x] A test pins the envelope shape (status code, `data.code`) for at least one domain error and the
       unknown-error 500 path.
-- [ ] `docs/api.md` shows the same envelope.
+- [x] `docs/api.md` shows the same envelope.
+
+> **Done:** `CommentsError` now declares `{ statusCode, statusMessage, message, data: { code, message } }`;
+> the `toH3Error` JSDoc and the `docs/api.md` client-access line were corrected to `error.data.code`. New
+> `test/unit/http.test.ts` pins both the domain-error envelope and the non-leaking 500. Workers suite 69 pass.
 
 ---
 
