@@ -124,4 +124,45 @@ describe('useComments async state', () => {
     expect(state.repliesByComment.value.c1![0]!.reactionCounts).toEqual({ like: 1 })
     expect(state.repliesByComment.value.c1![0]!.viewerReactions).toEqual(['like'])
   })
+
+  it('builds the encoded resource path', async () => {
+    fetchMock.mockResolvedValue(page([]))
+    mount(ref('/blog/my post/ü'))
+    await Promise.resolve()
+    await nextTick()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/_comments/blog/my%20post/%C3%BC',
+      expect.anything(),
+    )
+  })
+
+  it('appends the next page and resets on refresh', async () => {
+    fetchMock
+      .mockResolvedValueOnce(page([{ id: 'a' }], 'cursor-1', true))
+      .mockResolvedValueOnce(page([{ id: 'b' }]))
+      .mockResolvedValueOnce(page([{ id: 'z' }]))
+
+    const { state } = mount(ref('a'))
+    await Promise.resolve()
+    await nextTick()
+    expect(state.comments.value.map(c => c.id)).toEqual(['a'])
+    expect(state.hasMore.value).toBe(true)
+
+    await state.fetchMore()
+    expect(state.comments.value.map(c => c.id)).toEqual(['a', 'b'])
+
+    await state.refresh()
+    expect(state.comments.value.map(c => c.id)).toEqual(['z'])
+  })
+
+  it('captures a rejected request in error and clears loading', async () => {
+    fetchMock.mockRejectedValue(new Error('nope'))
+    const { state } = mount(ref('a'))
+    await Promise.resolve()
+    await nextTick()
+
+    expect(state.error.value).toBeInstanceOf(Error)
+    expect(state.loading.value).toBe(false)
+  })
 })

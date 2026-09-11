@@ -54,4 +54,31 @@ describe('initial schema', () => {
     const plan = results.map(r => r.detail).join(' | ')
     expect(plan).not.toMatch(/TEMP B-TREE/i)
   })
+
+  it('enforces the parent foreign key (RESTRICT) and cascades reactions', async () => {
+    const ts = '2025-01-01T00:00:00.000Z'
+    const insertComment = (id: string, parentId: string | null) => env.DB.prepare(
+      'INSERT INTO comments (id, resource, user_id, parent_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).bind(id, 'fk/site', 'fk-user', parentId, 'body', ts, ts)
+
+    // A parent_id that does not exist is rejected.
+    await expect(insertComment('fk-orphan', 'missing').run())
+      .rejects.toThrow(/FOREIGN KEY|constraint/i)
+
+    // A parent with a reply cannot be deleted (ON DELETE RESTRICT).
+    await insertComment('fk-parent', null).run()
+    await insertComment('fk-child', 'fk-parent').run()
+    await expect(env.DB.prepare('DELETE FROM comments WHERE id = ?').bind('fk-parent').run())
+      .rejects.toThrow(/FOREIGN KEY|constraint/i)
+
+    // Deleting a leaf cascades to its reactions.
+    await env.DB.prepare(
+      'INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).bind('fk-rx', 'fk-child', 'fk-user', 'like', ts).run()
+    await env.DB.prepare('DELETE FROM comments WHERE id = ?').bind('fk-child').run()
+    const reaction = await env.DB.prepare('SELECT 1 AS x FROM comment_reactions WHERE id = ?')
+      .bind('fk-rx')
+      .first()
+    expect(reaction).toBeNull()
+  })
 })

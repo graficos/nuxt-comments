@@ -357,12 +357,17 @@ large-deletion boundary cases, deletion-policy/PII behavior, migration constrain
 
 **Blocked by:** 01, 02, 03, 04, 06.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Tests exist for the 100-parameter boundaries, large `deleteUserData`, and PII scrubbing.
-- [ ] Tests assert the migration `CHECK`, `NOT NULL` PKs, FK enforcement/cascade, and query-plan/index use.
-- [ ] Tests cover the reply-during-delete race and duplicate-reaction path.
-- [ ] The suite fails if any of the above regresses.
+- [x] Tests exist for the 100-parameter boundaries, large `deleteUserData`, and PII scrubbing.
+- [x] Tests assert the migration `CHECK`, `NOT NULL` PKs, FK enforcement/cascade, and query-plan/index use.
+- [x] Tests cover the reply-during-delete race and duplicate-reaction path.
+- [x] The suite fails if any of the above regresses.
+
+> **Done:** Most of this was already delivered by tickets 01-06 (bulk `deleteUserData`, PII, 100-param
+> reaction reads, migration invariants, conditional delete/`ON CONFLICT`). The remaining gap was FK behavior:
+> `test/unit/migration.test.ts` now also asserts a dangling `parent_id` is rejected, a parent with a reply
+> cannot be deleted (RESTRICT), and deleting a leaf cascades its reactions. Workers 83 + node 57 pass.
 
 ---
 
@@ -376,11 +381,16 @@ are unverified.
 
 **Blocked by:** 10, 11, 12.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The real composable is tested (resource path building, append vs reset, error on rejected request).
-- [ ] The race/re-entrancy guards have tests (stale load, double toggle, double submit, rapid react).
-- [ ] Reply ownership and slot forwarding are covered.
+- [x] The real composable is tested (resource path building, append vs reset, error on rejected request).
+- [x] The race/re-entrancy guards have tests (stale load, double toggle, double submit, rapid react).
+- [x] Reply ownership and slot forwarding are covered.
+
+> **Done:** `test/nuxt/use-comments.nuxt.test.ts` already covered stale-load, double-toggle, thread reset,
+> `appendReply`, and `patchReaction`; it now also covers encoded resource path building, pagination
+> append-then-reset on refresh, and error capture on a rejected request. Ownership and slot forwarding are
+> covered in `test/nuxt/{comment,comments}.nuxt.test.ts`. Node 57 pass.
 
 ---
 
