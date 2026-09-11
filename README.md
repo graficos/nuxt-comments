@@ -60,15 +60,15 @@ export default defineNuxtConfig({
   modules: [
     // @nuxtjs/better-auth is auto-installed via moduleDependencies —
     // you do not need to list it here (listing it is harmless).
-    'nuxt-comments',
+    "nuxt-comments",
   ],
 
   comments: {
     database: {
-      binding: 'DB',
+      binding: "DB", // Same as the Wrangler binding name for your D1 database for the comments
     },
   },
-})
+});
 ```
 
 `wrangler.jsonc` (or `wrangler.toml`) — the binding name must match `comments.database.binding`:
@@ -79,9 +79,9 @@ export default defineNuxtConfig({
     {
       "binding": "DB",
       "database_name": "my-comments",
-      "database_id": "<your-database-id>"
-    }
-  ]
+      "database_id": "<your-database-id>",
+    },
+  ],
 }
 ```
 
@@ -89,7 +89,7 @@ Better Auth configuration files (`server/auth.config.ts` and `app/auth.config.ts
 
 ```ts
 // server/auth.config.ts
-import { defineServerAuth } from '@nuxtjs/better-auth/config'
+import { defineServerAuth } from "@nuxtjs/better-auth/config";
 
 export default defineServerAuth({
   socialProviders: {
@@ -98,7 +98,7 @@ export default defineServerAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
     },
   },
-})
+});
 ```
 
 `.env`:
@@ -131,15 +131,15 @@ Then use the component:
 
 ## Documentation
 
-| Document | Contents |
-|---|---|
-| [Configuration](./docs/configuration.md) | Module options, runtime config, env vars, pagination, reactions, limits, resource identifiers |
-| [Authentication](./docs/authentication.md) | Better Auth integration, providers, email-optional identity, consumer-owned login UI |
-| [Cloudflare & D1](./docs/cloudflare-d1.md) | Database creation, Wrangler binding, local development, migrations, production |
-| [Components](./docs/components.md) | `<NuxtComments>` props/slots/events, composables, types, styling strategy |
-| [Server API](./docs/api.md) | Endpoints, validation, errors, pagination, deletion policy |
-| [Adapters](./docs/adapters.md) | `CommentsStore` boundary, D1 adapter, future GitHub Discussions architecture |
-| [Playground](./playground/README.md) | Running the demo app locally, OAuth setup |
+| Document                                   | Contents                                                                                      |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| [Configuration](./docs/configuration.md)   | Module options, runtime config, env vars, pagination, reactions, limits, resource identifiers |
+| [Authentication](./docs/authentication.md) | Better Auth integration, providers, email-optional identity, consumer-owned login UI          |
+| [Cloudflare & D1](./docs/cloudflare-d1.md) | Database creation, Wrangler binding, local development, migrations, production                |
+| [Components](./docs/components.md)         | `<NuxtComments>` props/slots/events, composables, types, styling strategy                     |
+| [Server API](./docs/api.md)                | Endpoints, validation, errors, pagination, deletion policy                                    |
+| [Adapters](./docs/adapters.md)             | `CommentsStore` boundary, D1 adapter, future GitHub Discussions architecture                  |
+| [Playground](./playground/README.md)       | Running the demo app locally, OAuth setup                                                     |
 
 ## Features
 
