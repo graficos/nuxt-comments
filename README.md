@@ -6,6 +6,19 @@ An embeddable, **unstyled** comments system for **Nuxt 4**, backed by **Cloudfla
 
 > The npm package name is provisional (`nuxt-comments`) until first publish. Nothing in the implementation depends on it besides `package.json` and the module `meta.name`.
 
+## Features
+
+- 🧶 Threaded comments (adjacency list, arbitrary nesting via `parentId`)
+- 📖Cursor-based pagination for top-level comments and replies
+- 😊 Reactions with configurable types and database-enforced uniqueness
+- 🔑 Server-side ownership checks (edit/delete your own comments only)
+- 🕳️ Soft deletion that preserves threads (`[deleted]` placeholders)
+- 🚫 Admin user deletion (`deleteCommentsUser`) with documented semantics
+- 💪🏽 Shared validation, consistent HTTP error envelope (thanks to Valibot)
+- ⏱️ Rate-limiter extension point (Cloudflare-native integration documented)
+- 🎨 Unstyled, accessible components with typed slots
+- 🔄 Adapter boundary for alternative persistence backends (potentially future feature)
+
 ## Why
 
 - **Nuxt-native.** Server routes, composables and components are registered by the module. No external comment service, no embed script, no analytics.
@@ -140,19 +153,6 @@ Then use the component:
 | [Server API](./docs/api.md)                | Endpoints, validation, errors, pagination, deletion policy                                    |
 | [Adapters](./docs/adapters.md)             | `CommentsStore` boundary, D1 adapter, future GitHub Discussions architecture                  |
 | [Playground](./playground/README.md)       | Running the demo app locally, OAuth setup                                                     |
-
-## Features
-
-- Threaded comments (adjacency list, arbitrary nesting via `parentId`)
-- Cursor-based pagination for top-level comments and replies
-- Reactions with configurable types and database-enforced uniqueness
-- Server-side ownership checks (edit/delete your own comments only)
-- Soft deletion that preserves threads (`[deleted]` placeholders)
-- Admin user deletion (`deleteCommentsUser`) with documented semantics
-- Shared Valibot validation, consistent HTTP error envelope
-- Rate-limiter extension point (Cloudflare-native integration documented)
-- Unstyled, accessible components with typed slots
-- Adapter boundary for alternative persistence backends
 
 ## Development
 
