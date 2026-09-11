@@ -21,3 +21,5 @@ coverage
 .nuxtrc
 auth.config.ts
 server/auth.config.ts
+.opencode/goals
+solutions/
