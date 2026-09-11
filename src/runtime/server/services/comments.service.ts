@@ -17,7 +17,6 @@ export interface CommentsServiceConfig {
   maxResourceLength: number
   defaultPageSize: number
   maxPageSize: number
-  preserveThreadsWithReplies: boolean
 }
 
 export interface CommentsServiceDeps {
@@ -217,7 +216,6 @@ export function serviceConfigFromRuntimeConfig(rc: {
   reactions?: { enabled?: boolean, types?: string[] }
   limits?: { maxBodyLength?: number, maxResourceLength?: number }
   pagination?: { pageSize?: number, maxPageSize?: number }
-  softDelete?: { preserveThreadsWithReplies?: boolean }
 }): CommentsServiceConfig {
   return {
     reactionsEnabled: rc.reactions?.enabled ?? true,
@@ -226,6 +224,5 @@ export function serviceConfigFromRuntimeConfig(rc: {
     maxResourceLength: rc.limits?.maxResourceLength ?? 512,
     defaultPageSize: rc.pagination?.pageSize ?? 20,
     maxPageSize: rc.pagination?.maxPageSize ?? 100,
-    preserveThreadsWithReplies: rc.softDelete?.preserveThreadsWithReplies ?? true,
   }
 }

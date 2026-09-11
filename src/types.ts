@@ -25,10 +25,6 @@ export interface ModuleOptions {
     /** Prefix for exposed components. Set to '' for <Comments>. @default 'Nuxt' */
     prefix?: string
   }
-  softDelete?: {
-    /** Preserve a [deleted] placeholder when a comment with replies is deleted. @default true */
-    preserveThreadsWithReplies?: boolean
-  }
   /** Rate limiter strategy. 'memory' is single-isolate only. @default 'memory' */
   rateLimiter?: 'none' | 'memory'
   /**
@@ -49,7 +45,6 @@ export interface RuntimeConfigPublicComments {
   pagination: Required<NonNullable<NonNullable<ModuleOptions['pagination']>>>
   reactions: Required<NonNullable<NonNullable<ModuleOptions['reactions']>>>
   limits: Required<NonNullable<NonNullable<ModuleOptions['limits']>>>
-  softDelete: Required<NonNullable<NonNullable<ModuleOptions['softDelete']>>>
   componentsPrefix: string
 }
 

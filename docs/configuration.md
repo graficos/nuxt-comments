@@ -30,9 +30,6 @@ export default defineNuxtConfig({
     components: {
       prefix: 'Nuxt',
     },
-    softDelete: {
-      preserveThreadsWithReplies: true,
-    },
     rateLimiter: 'memory',
     rateLimiterTrustProxy: false,
   },
@@ -49,7 +46,6 @@ export default defineNuxtConfig({
 | `limits.maxBodyLength` | `number` | `4000` | Maximum comment body length in characters. |
 | `limits.maxResourceLength` | `number` | `512` | Maximum normalized resource identifier length. |
 | `components.prefix` | `string` | `'Nuxt'` | Component name prefix. Set to `''` for `<Comments>`, `<Comment>`, …. |
-| `softDelete.preserveThreadsWithReplies` | `boolean` | `true` | When a comment with replies is deleted it becomes a `[deleted]` tombstone instead of destroying the thread. |
 | `rateLimiter` | `'none' \| 'memory'` | `'memory'` | Mutation rate limiting. `'memory'` is a per-isolate in-memory limiter (single-isolate only). |
 | `rateLimiterTrustProxy` | `boolean` | `false` | Trust `x-forwarded-for` for rate-limit identity. Enable only behind a trusted proxy; otherwise `cf-connecting-ip` is used. |
 
@@ -85,7 +81,6 @@ Both forms are the same components. The module registers them explicitly with `a
 | `pagination` | `{ pageSize, maxPageSize }` |
 | `reactions` | `{ enabled, types }` |
 | `limits` | `{ maxBodyLength, maxResourceLength }` |
-| `softDelete` | `{ preserveThreadsWithReplies }` |
 | `componentsPrefix` | The resolved component prefix (informational). |
 
 No secrets are ever written to the public runtime config. The components read `runtimeConfig.public.comments` for reaction types and pagination defaults.

@@ -130,7 +130,6 @@ const CONFIG: CommentsServiceConfig = {
   maxResourceLength: 512,
   defaultPageSize: 20,
   maxPageSize: 100,
-  preserveThreadsWithReplies: true,
 }
 
 function makeService(opts?: {
@@ -296,7 +295,6 @@ describe('CommentsService', () => {
         maxResourceLength: 512,
         defaultPageSize: 20,
         maxPageSize: 100,
-        preserveThreadsWithReplies: true,
       })
     })
     it('uses provided values', () => {

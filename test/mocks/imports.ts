@@ -10,7 +10,6 @@ export function useRuntimeConfig() {
         pagination: { pageSize: 20, maxPageSize: 100 },
         reactions: { enabled: true, types: ['like', 'heart'] },
         limits: { maxBodyLength: 4000, maxResourceLength: 512 },
-        softDelete: { preserveThreadsWithReplies: true },
         componentsPrefix: 'Nuxt',
       },
     },

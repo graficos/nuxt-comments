@@ -28,7 +28,6 @@ describe('nuxt-comments module (static)', () => {
       reactions: { enabled: true },
       limits: { maxBodyLength: 4000, maxResourceLength: 512 },
       components: { prefix: 'Nuxt' },
-      softDelete: { preserveThreadsWithReplies: true },
       rateLimiter: 'memory',
     })
   })

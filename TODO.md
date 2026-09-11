@@ -228,13 +228,19 @@ from the public surface and docs.
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done — decision: **remove the option** (preserve threads unconditionally).
 
-- [ ] A decision is recorded: implement the `false` branch, or remove the option.
-- [ ] If implemented: deleting a comment with replies either preserves the thread (default) or removes the
+- [x] A decision is recorded: implement the `false` branch, or remove the option.
+- [x] If implemented: deleting a comment with replies either preserves the thread (default) or removes the
       subtree, and a test proves the non-default path.
-- [ ] If removed: the option, its default, and all docs references are gone.
-- [ ] No dead config field remains either way.
+- [x] If removed: the option, its default, and all docs references are gone.
+- [x] No dead config field remains either way.
+
+> **Done:** Removed rather than implemented. A `false` branch would have to recursively delete the subtree, and
+> since replies can belong to other users that is a destructive footgun for a config flag. Threads are now
+> always preserved as tombstones. Removed `softDelete` from `ModuleOptions`, public runtime config,
+> `CommentsServiceConfig`, `serviceConfigFromRuntimeConfig`, module defaults, test mocks, and docs. Workers 82
+> + node 41 pass; lint and typecheck clean.
 
 ---
 

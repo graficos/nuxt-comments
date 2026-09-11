@@ -28,9 +28,6 @@ const defaults: ModuleOptions = {
   components: {
     prefix: 'Nuxt',
   },
-  softDelete: {
-    preserveThreadsWithReplies: true,
-  },
   rateLimiter: 'memory',
 }
 
@@ -74,7 +71,6 @@ export default defineNuxtModule<ModuleOptions>({
         pagination: options.pagination,
         reactions: { ...options.reactions, types: reactionTypes },
         limits: options.limits,
-        softDelete: options.softDelete,
         componentsPrefix: componentPrefix,
       },
     ) as NonNullable<typeof nuxt.options.runtimeConfig.public.comments>
