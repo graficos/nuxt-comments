@@ -21,6 +21,10 @@ coverage
 .nuxtrc
 auth.config.ts
 server/auth.config.ts
+
+# Local tooling state (not part of the package)
+.opencode/goals/
+.vscode/settings.json
 .opencode/goals
 solutions/
 cookies.txt
