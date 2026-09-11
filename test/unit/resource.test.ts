@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeResource, resourceFromParam } from '../../src/runtime/shared/resource'
+import { normalizeResource, resourceFromParam, ResourceLengthError } from '../../src/runtime/shared/resource'
 
 describe('normalizeResource', () => {
   it('trims whitespace', () => {
@@ -29,6 +29,10 @@ describe('normalizeResource', () => {
   it('rejects > 512 chars', () => {
     expect(() => normalizeResource('a'.repeat(513))).toThrow()
   })
+  it('honors a custom max length and reports it as a length error', () => {
+    expect(normalizeResource('a'.repeat(600), 600)).toBe('a'.repeat(600))
+    expect(() => normalizeResource('a'.repeat(601), 600)).toThrow(ResourceLengthError)
+  })
   it('rejects resources that normalize to empty (e.g. "/")', () => {
     expect(() => normalizeResource('/')).toThrow()
   })
@@ -51,6 +55,9 @@ describe('resourceFromParam', () => {
   })
   it('throws on undefined', () => {
     expect(() => resourceFromParam(undefined)).toThrow()
+  })
+  it('forwards a custom max length', () => {
+    expect(resourceFromParam(['a'.repeat(600)], 600)).toBe('a'.repeat(600))
   })
   it('round-trips: normalizeResource output is a valid param value', () => {
     const stored = normalizeResource('/blog/memorylessness')

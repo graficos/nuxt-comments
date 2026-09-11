@@ -1,10 +1,18 @@
+/** Thrown when a resource exceeds the configured maximum length. */
+export class ResourceLengthError extends Error {
+  constructor(public readonly maxLength: number) {
+    super(`resource must not exceed ${maxLength} characters`)
+    this.name = 'ResourceLengthError'
+  }
+}
+
 /**
  * Normalize a resource identifier for consistent storage and querying.
  *
  * Contract: the resource identifier is an opaque, non-empty string
- * (max 512 chars). URL paths (`/blog/memorylessness`) and namespaced ids
- * (`blog:memorylessness`) are both valid; the system does not assume a
- * URL.
+ * (max `maxLength` chars, default 512). URL paths (`/blog/memorylessness`)
+ * and namespaced ids (`blog:memorylessness`) are both valid; the system does
+ * not assume a URL.
  *
  * Canonical form (documented in the README):
  *   - surrounding whitespace trimmed
@@ -15,10 +23,11 @@
  *   - trailing slash removed
  *   - case preserved
  *
- * Throws on invalid input (non-string, empty, > 512 chars, or reduces
+ * Throws `ResourceLengthError` when longer than `maxLength`; throws a plain
+ * `Error`/`TypeError` for other invalid input (non-string, empty, or reduces
  * to an empty string such as `/`).
  */
-export function normalizeResource(input: unknown): string {
+export function normalizeResource(input: unknown, maxLength = 512): string {
   if (typeof input !== 'string') {
     throw new TypeError('resource must be a string')
   }
@@ -26,8 +35,8 @@ export function normalizeResource(input: unknown): string {
   if (value.length === 0) {
     throw new Error('resource must not be empty')
   }
-  if (value.length > 512) {
-    throw new Error('resource must not exceed 512 characters')
+  if (value.length > maxLength) {
+    throw new ResourceLengthError(maxLength)
   }
   // Collapse repeated slashes.
   value = value.replace(/\/+/g, '/')
@@ -49,10 +58,10 @@ export function normalizeResource(input: unknown): string {
 }
 
 /** Decode the `**:resource` route param into a normalized resource id. */
-export function resourceFromParam(param: string | string[] | undefined): string {
+export function resourceFromParam(param: string | string[] | undefined, maxLength = 512): string {
   if (param === undefined) {
     throw new Error('resource is required')
   }
   const joined = Array.isArray(param) ? param.filter(Boolean).join('/') : param
-  return normalizeResource(joined)
+  return normalizeResource(joined, maxLength)
 }

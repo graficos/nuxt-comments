@@ -1,7 +1,7 @@
 import type { Comment, Cursor, Reaction } from '../../shared/types'
 import type { CommentsStore } from '../repositories/comments-store'
 import type { ViewerInfo } from './auth'
-import { normalizeResource } from '../../shared/resource'
+import { normalizeResource, ResourceLengthError } from '../../shared/resource'
 import {
   unauthenticated,
   forbidden,
@@ -125,12 +125,12 @@ export function createCommentsService(deps: CommentsServiceDeps) {
 
     let resource: string
     try {
-      resource = normalizeResource(input.resource)
+      resource = normalizeResource(input.resource, config.maxResourceLength)
     }
-    catch {
+    catch (err) {
+      if (err instanceof ResourceLengthError) throw validationFailed('resource too long')
       throw badRequest('invalid resource identifier')
     }
-    if (resource.length > config.maxResourceLength) throw validationFailed('resource too long')
 
     if (input.parentId) {
       const parent = await store.getComment(input.parentId)

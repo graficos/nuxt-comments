@@ -204,12 +204,17 @@ should actually be reachable. Today a hardcoded 512 cap (400) shadows the config
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The configured limit is the only length check, and an over-length resource returns the documented
+- [x] The configured limit is the only length check, and an over-length resource returns the documented
       status.
-- [ ] A test with `maxResourceLength` above 512 accepts a longer id; a test at the boundary rejects.
-- [ ] The option is documented accurately.
+- [x] A test with `maxResourceLength` above 512 accepts a longer id; a test at the boundary rejects.
+- [x] The option is documented accurately.
+
+> **Done:** `normalizeResource`/`resourceFromParam` take an optional `maxLength` and throw a dedicated
+> `ResourceLengthError`; the service and both resource handlers pass `limits.maxResourceLength` and map the
+> length error to `validation_failed` (422) instead of a hardcoded 512 -> 400. Tests cover a 600-char limit
+> (previously unreachable) at service and unit level. Workers suite 82 pass.
 
 ---
 

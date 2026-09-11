@@ -185,6 +185,16 @@ describe('CommentsService', () => {
       await expect(service.createComment({ resource: 'blog/x', body: 'a'.repeat(101) }))
         .rejects.toMatchObject({ code: 'validation_failed' })
     })
+    it('honors a configured maxResourceLength above 512', async () => {
+      const { service } = makeService({ store, config: { maxResourceLength: 600 } })
+      const c = await service.createComment({ resource: 'a'.repeat(600), body: 'hi' })
+      expect(c.resource).toBe('a'.repeat(600))
+    })
+    it('rejects a resource over the configured limit with validation_failed', async () => {
+      const { service } = makeService({ store, config: { maxResourceLength: 600 } })
+      await expect(service.createComment({ resource: 'a'.repeat(601), body: 'hi' }))
+        .rejects.toMatchObject({ code: 'validation_failed' })
+    })
     it('rejects a parent from a different resource', async () => {
       const { service } = makeService({ store })
       const parent = await service.createComment({ resource: 'blog/a', body: 'p' })
