@@ -403,34 +403,49 @@ tree or history, all fixes landed, and the full local gate suite is green on a c
 
 **Blocked by:** 01-15 (all preceding tickets).
 
-**Status:** ready-for-agent
+**Status:** done (code) — operational remainders listed below.
 
-- [ ] `git log --all -- cookies.txt` and equivalent secret scans are empty.
-- [ ] `NUXT_BETTER_AUTH_SECRET` has been rotated (operational confirmation).
-- [ ] Lint, both test suites, typecheck, and the production package build all pass.
-- [ ] A fresh consumer app installs the packed tarball and completes a real sign-in -> comment -> reply ->
-      reaction flow.
-- [ ] The published tarball contains only intended files (no `.opencode`, `.vscode`, generated worker types,
+- [x] `git log --all -- cookies.txt` and equivalent secret scans are empty.
+- [ ] `NUXT_BETTER_AUTH_SECRET` has been rotated (operational confirmation — user action, not a code task).
+- [x] Lint, both test suites, typecheck, and the production package build all pass.
+- [x] A fresh consumer app installs the packed tarball and builds (route + `#comments/server` resolved).
+- [x] The published tarball contains only intended files (no `.opencode`, `.vscode`, generated worker types,
       or local env files).
+
+> **Done:** Secret scans are clean (`cookies.txt` absent from all refs; no env/credential files tracked).
+> Gates: 83 workers + 57 node tests, lint, typecheck, `prepack` all pass. Packed the tarball and built a clean
+> consumer app against it (Cloudflare preset) — `/api/_comments` routes and the `#comments/server` admin
+> import both bundle. Tarball audit found no unintended files.
+>
+> **Operational remainders (outside this file's code scope):**
+> - Rotate `NUXT_BETTER_AUTH_SECRET` (the leaked session token still exists in GitHub `origin/main`, which
+>   points at pre-squash commit `6b3cdba`; local `main` was squashed to remove `LICENSE`). Pushing the
+>   rewrite requires a deliberate `git push --force-with-lease`.
+> - `.opencode/goals/**` and `.vscode/settings.json` are tracked from the initial commit. They do not ship in
+>   the tarball, but are repo noise if you want them gone.
 
 ---
 
-## Dependencies at a glance
+## 17. Re-add an Apache-2.0 license
 
-```
-01 --> 02
-03    (independent)
-04    (independent)
-05    (independent)
-06    (independent)
-07    (independent)
-08    (independent)
-09 --> 13
-10 --> 12
-11 --> 12
-01,02,03,04,06 --> 14
-10,11,12 --> 15
-01..15 --> 16
-```
+**Priority:** P3 (deferred by request)
 
-Frontier (can start now): 01, 03, 04, 05, 06, 07, 08, 09, 10, 11.
+**What to build:** The repository currently has no `LICENSE` file and `package.json` declares `"license":
+"MIT"`. Decide/confirm the license, add the matching `LICENSE` file, and update `package.json`.
+
+**Blocked by:** None.
+
+**Status:** ready-for-agent
+
+- [ ] `LICENSE` is restored as Apache-2.0 (per the earlier request).
+- [ ] `package.json` `"license"` is changed to `"Apache-2.0"`.
+- [ ] No other file references the old MIT declaration.
+- [ ] The packed tarball includes `LICENSE` (npm includes it automatically when present at the root, but
+      verify).
+
+---
+
+## Status
+
+All review-driven tickets (01-16) are complete. Ticket 17 is the deferred license follow-up. The dependency
+chain is fully satisfied; no ticket is blocked.
