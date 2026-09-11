@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { ref, h } from 'vue'
+import { ref, h, nextTick } from 'vue'
 import Comments from '../../src/runtime/app/components/Comments.vue'
 import type { Comment as CommentType } from '../../src/runtime/shared/types'
 
@@ -72,6 +72,8 @@ function mockComposable(overrides?: {
     deleteComment: vi.fn().mockResolvedValue(undefined),
     react: vi.fn().mockResolvedValue(undefined),
     unreact: vi.fn().mockResolvedValue(undefined),
+    appendReply: vi.fn(),
+    patchReaction: vi.fn(),
   }
   useCommentsMock.mockReturnValue(state)
   return state
@@ -173,8 +175,77 @@ describe('<Comments> (Nuxt environment)', () => {
     const state = mockComposable({ comments: [makeComment({ userId: 'u2' })] })
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
     await wrapper.find('[data-reaction-type="like"]').trigger('click')
+    await Promise.resolve()
+    await nextTick()
     expect(state.react).toHaveBeenCalledWith('c1', 'like')
     expect(wrapper.emitted('react')).toHaveLength(1)
+  })
+
+  it('blocks a second submit while the first is in flight', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [] })
+    let resolveCreate: (c: CommentType) => void = () => {}
+    state.createComment.mockImplementation(() => new Promise<CommentType>((resolve) => {
+      resolveCreate = resolve
+    }))
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    const form = wrapper.find('form')
+    await form.find('textarea').setValue('one')
+    await form.trigger('submit')
+    await form.find('textarea').setValue('two')
+    await form.trigger('submit')
+    resolveCreate(makeComment({ id: 'c9' }))
+    await Promise.resolve()
+    await nextTick()
+    expect(state.createComment).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces a failed mutation as an error event', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [] })
+    state.createComment.mockRejectedValue(new Error('boom'))
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    const form = wrapper.find('form')
+    await form.find('textarea').setValue('x')
+    await form.trigger('submit')
+    await Promise.resolve()
+    await nextTick()
+    expect(wrapper.emitted('error')).toHaveLength(1)
+  })
+
+  it('prepends a reply into a loaded thread instead of refetching', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', userId: 'u1' })] })
+    state.repliesByComment.value = { c1: [makeComment({ id: 'r-old', parentId: 'c1' })] }
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    await wrapper.find('button[aria-label="Reply to comment c1"]').trigger('click')
+    const form = wrapper.find('form')
+    await form.find('textarea').setValue('my reply')
+    await form.trigger('submit')
+    await Promise.resolve()
+    await nextTick()
+    expect(state.appendReply).toHaveBeenCalled()
+    expect(state.loadReplies).not.toHaveBeenCalled()
+  })
+
+  it('patches reaction state optimistically without reloading', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ userId: 'u2' })] })
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    await wrapper.find('[data-reaction-type="like"]').trigger('click')
+    expect(state.patchReaction).toHaveBeenCalledWith('c1', 'like', true)
+    expect(state.refresh).not.toHaveBeenCalled()
+  })
+
+  it('patches a nested reply reaction on its own id', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', userId: 'u2' })] })
+    state.repliesByComment.value = { c1: [makeComment({ id: 'r1', parentId: 'c1', userId: 'u2' })] }
+    state.expanded.value = { c1: true }
+    const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    const nested = wrapper.findAll('article')[1]!
+    await nested.find('[data-reaction-type="like"]').trigger('click')
+    expect(state.patchReaction).toHaveBeenCalledWith('r1', 'like', true)
   })
 
   it('supports a custom comment-body slot with typed data', async () => {

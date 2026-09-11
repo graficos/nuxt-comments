@@ -1,6 +1,4 @@
 import type { H3Event } from 'h3'
-import { useRuntimeConfig } from '#imports'
-import { unauthenticated } from '../utils/errors'
 
 export interface ViewerInfo {
   id: string
@@ -31,17 +29,4 @@ export async function getViewer(event: H3Event): Promise<ViewerInfo | null> {
     console.error('[nuxt-comments] failed to resolve session; treating request as anonymous:', err)
     return null
   }
-}
-
-/** Require an authenticated viewer or throw 401. */
-export async function requireViewer(event: H3Event): Promise<ViewerInfo> {
-  const viewer = await getViewer(event)
-  if (!viewer) {
-    throw unauthenticated()
-  }
-  return viewer
-}
-
-export function useCommentsConfig(event: H3Event) {
-  return useRuntimeConfig(event).public.comments
 }

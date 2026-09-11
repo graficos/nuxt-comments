@@ -6,14 +6,12 @@ export type { CommentsService } from './services/comments.service'
 export { useCommentsService } from './services/index'
 export { getRateLimiter, InMemoryRateLimiter, NoopRateLimiter } from './utils/rate-limiter'
 export type { RateLimiter } from './utils/rate-limiter'
-export type { AuthorResolver } from './utils/author-resolver'
 export {
   CommentsApiError,
   badRequest,
   unauthenticated,
   forbidden,
   notFound,
-  conflict,
   validationFailed,
   rateLimited,
   internalError,

@@ -5,7 +5,6 @@ const STATUS: Record<CommentsErrorCode, number> = {
   unauthenticated: 401,
   forbidden: 403,
   not_found: 404,
-  conflict: 409,
   validation_failed: 422,
   rate_limited: 429,
   internal: 500,
@@ -45,10 +44,6 @@ export function forbidden(msg = 'forbidden'): CommentsApiError {
 
 export function notFound(msg = 'not found'): CommentsApiError {
   return new CommentsApiError('not_found', msg)
-}
-
-export function conflict(msg: string): CommentsApiError {
-  return new CommentsApiError('conflict', msg)
 }
 
 export function validationFailed(msg: string): CommentsApiError {

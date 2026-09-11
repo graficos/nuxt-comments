@@ -304,14 +304,21 @@ disappearing.
 
 **Blocked by:** 10 (composable state guards/helpers), 11 (per-comment ownership predicate).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The composer blocks a second in-flight submit and resets its state afterward.
-- [ ] Posting into an expanded thread prepends the created reply instead of refetching/duplicating.
-- [ ] Reaction toggles use optimistic/current state so a fast double-click resolves correctly.
-- [ ] Reacting to a nested reply refreshes that reply's counts and active state.
-- [ ] Mutation failures set the error state and fire the documented error event.
-- [ ] Tests cover each behavior.
+- [x] The composer blocks a second in-flight submit and resets its state afterward.
+- [x] Posting into an expanded thread prepends the created reply instead of refetching/duplicating.
+- [x] Reaction toggles use optimistic/current state so a fast double-click resolves correctly.
+- [x] Reacting to a nested reply refreshes that reply's counts and active state.
+- [x] Mutation failures set the error state and fire the documented error event.
+- [x] Tests cover each behavior.
+
+> **Done:** `useComments` gained `appendReply` (prepend + expand) and `patchReaction` (local counts/viewer
+> state, top-level and nested). `Comments` guards `onSubmit` with `submitting`, prepends replies into loaded
+> threads (only opening unfetched threads via `toggleReplies`), patches reactions optimistically with a
+> per-comment+type request queue, and routes every mutation failure through `fail()` -> `error` + `error`
+> event. Added tests for double-submit, error surfacing, reply prepend, optimistic reaction, and nested-reply
+> reaction; updated `docs/components.md`. Node 54 pass; lint/typecheck clean.
 
 ---
 
@@ -325,12 +332,19 @@ that break in the published tarball, and drop the never-thrown `conflict` error 
 
 **Blocked by:** 09 (removing the `preserveThreadsWithReplies` option may touch the same docs surface).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Nothing in the package imports the removed symbols; lint and the published build are clean.
-- [ ] `valibot` is either used at the boundary or removed from dependencies and the lockfile.
-- [ ] README links resolve in the packed tarball (ship `docs`, or use absolute URLs).
-- [ ] Docs no longer claim validation or options that do not exist.
+- [x] Nothing in the package imports the removed symbols; lint and the published build are clean.
+- [x] `valibot` is either used at the boundary or removed from dependencies and the lockfile.
+- [x] README links resolve in the packed tarball (ship `docs`, or use absolute URLs).
+- [x] Docs no longer claim validation or options that do not exist.
+
+> **Done:** Deleted `src/runtime/shared/schemas.ts` (dead) and removed the `valibot` dependency + lockfile
+> entry; removed unused `requireViewer`/`useCommentsConfig`; deleted `author-resolver.ts` and its
+> `#comments/server` export; dropped the never-thrown `conflict()` error (STATUS/union/server export/409 docs
+> row); added `docs` and `playground/README.md` to `files`; corrected the docs validation section and the
+> adapters page. Packed tarball contains `docs/` and `playground/README.md` and no removed files. Tests 136
+> pass; lint/typecheck/package build clean.
 
 ---
 

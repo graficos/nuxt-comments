@@ -42,7 +42,9 @@
   },
   "files": [
     "dist",
-    "migrations"
+    "migrations",
+    "docs",
+    "playground/README.md"
   ],
   "workspaces": [
     "playground"
@@ -65,8 +67,7 @@
     "@nuxt/kit": "^4.5.2",
     "defu": "^6.1.4",
     "ofetch": "^1.5.1",
-    "ulidx": "^2.4.1",
-    "valibot": "^1.0.0"
+    "ulidx": "^2.4.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.0.0",

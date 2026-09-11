@@ -75,7 +75,6 @@ export type CommentsErrorCode
     | 'unauthenticated'
     | 'forbidden'
     | 'not_found'
-    | 'conflict'
     | 'validation_failed'
     | 'rate_limited'
     | 'internal'

@@ -51,6 +51,8 @@ const {
   deleteComment,
   react,
   unreact,
+  appendReply,
+  patchReaction,
 } = useComments(toRef(props, 'resource'), { limit: props.limit })
 
 const session = useCommentsSession()
@@ -62,29 +64,44 @@ const replyingTo = ref<CommentType | null>(null)
 const editing = ref<CommentType | null>(null)
 const submitting = ref(false)
 
+function fail(err: unknown) {
+  const e = err instanceof Error ? err : new Error(String(err))
+  error.value = e
+  emit('error', e)
+}
+
 async function onSubmit(body: string) {
-  if (editing.value) {
-    const updated = await updateComment(editing.value.id, body)
-    emit('update', updated)
-    editing.value = null
-    return
-  }
-  if (replyingTo.value) {
-    const created = await reply(replyingTo.value.id, body)
-    emit('reply', created)
-    replyingTo.value = null
-    // Reload the parent's replies so the new reply appears.
-    if (expanded.value[created.parentId ?? '']) {
-      await loadReplies(created.parentId!)
+  // Ignore a second submit while the first is still in flight.
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    if (editing.value) {
+      const updated = await updateComment(editing.value.id, body)
+      emit('update', updated)
+      editing.value = null
+      return
     }
-    else {
-      await toggleReplies(created.parentId!)
+    if (replyingTo.value) {
+      const parentId = replyingTo.value.id
+      const created = await reply(parentId, body)
+      emit('reply', created)
+      replyingTo.value = null
+      // If the thread is already loaded, insert the reply locally; otherwise
+      // open it (page one already includes the new reply).
+      if (repliesByComment.value[parentId]) appendReply(created)
+      else await toggleReplies(parentId)
+      return
     }
-    return
+    const created = await createComment(body)
+    emit('create', created)
+    await refresh()
   }
-  const created = await createComment(body)
-  emit('create', created)
-  await refresh()
+  catch (err) {
+    fail(err)
+  }
+  finally {
+    submitting.value = false
+  }
 }
 
 function startReply(c: CommentType) {
@@ -96,25 +113,66 @@ function startEdit(c: CommentType) {
   replyingTo.value = null
 }
 async function onDelete(c: CommentType) {
-  await deleteComment(c.id)
-  emit('delete', c)
-  await refresh()
+  try {
+    await deleteComment(c.id)
+    emit('delete', c)
+    await refresh()
+  }
+  catch (err) {
+    fail(err)
+  }
+}
+
+// Serialize reaction requests per comment+type so rapid toggles apply in order.
+const reactionQueues = new Map<string, Promise<unknown>>()
+function queueReaction(key: string, task: () => Promise<void>): Promise<void> {
+  const tail = reactionQueues.get(key)
+  // First request for a key runs immediately; later ones chain after it.
+  const run = tail ? tail.then(() => task()) : task()
+  reactionQueues.set(key, run.catch(() => {}))
+  return run
 }
 async function onReact(payload: { comment: CommentType, type: string }) {
-  await react(payload.comment.id, payload.type)
-  emit('react', payload)
-  await refresh()
+  const { comment, type } = payload
+  const wasActive = comment.viewerReactions?.includes(type) ?? false
+  patchReaction(comment.id, type, true)
+  try {
+    await queueReaction(`${comment.id}:${type}`, () => react(comment.id, type))
+    emit('react', payload)
+  }
+  catch (err) {
+    patchReaction(comment.id, type, wasActive)
+    fail(err)
+  }
 }
 async function onUnreact(payload: { comment: CommentType, type: string }) {
-  await unreact(payload.comment.id, payload.type)
-  emit('unreact', payload)
-  await refresh()
+  const { comment, type } = payload
+  const wasActive = comment.viewerReactions?.includes(type) ?? false
+  patchReaction(comment.id, type, false)
+  try {
+    await queueReaction(`${comment.id}:${type}`, () => unreact(comment.id, type))
+    emit('unreact', payload)
+  }
+  catch (err) {
+    patchReaction(comment.id, type, wasActive)
+    fail(err)
+  }
 }
 async function onToggleReplies(c: CommentType) {
-  await toggleReplies(c.id)
+  try {
+    await toggleReplies(c.id)
+  }
+  catch (err) {
+    fail(err)
+  }
 }
 async function onLoadReplies(c: CommentType) {
-  await loadReplies(c.id)
+  try {
+    await loadReplies(c.id)
+  }
+  catch (err) {
+    fail(err)
+  }
 }
 
 /** Sign-in action for the `#login` slot (provider names are consumer-owned). */

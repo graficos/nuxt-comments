@@ -74,7 +74,7 @@ Top-level comments only. Replies are fetched separately from `/threads/:commentI
 
 ## Validation
 
-Shared Valibot schemas (`src/runtime/shared/schemas.ts`) validate all input. The service additionally enforces:
+`CommentsService` validates all input before it reaches the store:
 
 - the resource normalizes to a non-empty string ≤ `limits.maxResourceLength` and is not the reserved `threads/` prefix;
 - bodies are non-empty and ≤ `limits.maxBodyLength`;
@@ -102,7 +102,6 @@ Errors use h3's envelope, with the package's code in `data`:
 | `401` | `unauthenticated` | Mutation without a session. |
 | `403` | `forbidden` | Editing/deleting another user's comment. |
 | `404` | `not_found` | Comment or parent not found. |
-| `409` | `conflict` | Reserved for conflicting state. |
 | `422` | `validation_failed` | Schema/limit/reaction-type failures. |
 | `429` | `rate_limited` | Mutation rate limit exceeded. |
 | `500` | `internal` | Unexpected error. Original error is logged server-side; no database details leak to clients. |

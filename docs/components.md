@@ -173,10 +173,16 @@ const {
   deleteComment, // (commentId: string) => Promise<void>
   react, // (commentId: string, type: string) => Promise<void>
   unreact, // (commentId: string, type: string) => Promise<void>
+  appendReply, // (comment: Comment) => void      insert a created reply locally
+  patchReaction, // (commentId, type, active) => void  optimistic reaction update
 } = useComments("/blog/my-post");
 ```
 
-`resource` may be a string or a `Ref<string>`; the composable reloads when it changes.
+`resource` may be a string or a `Ref<string>`; the composable reloads when it changes and resets thread
+state. In-flight loads are guarded: a stale response cannot overwrite a newer resource, and a reply thread is
+never fetched twice concurrently. `appendReply` and `patchReaction` let a UI update local state after a
+mutation (for example the built-in `<Comments>` prepends a posted reply and patches reaction counts) instead
+of refetching.
 
 ### `useCommentsSession()`
 

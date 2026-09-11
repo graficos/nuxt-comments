@@ -89,4 +89,39 @@ describe('useComments async state', () => {
     expect(state.expanded.value).toEqual({})
     expect(state.repliesByComment.value).toEqual({})
   })
+
+  it('appendReply prepends the reply and expands the thread', async () => {
+    fetchMock.mockResolvedValue(page([]))
+    const resource = ref('a')
+    const { state } = mount(resource)
+    await Promise.resolve()
+    await nextTick()
+
+    state.appendReply({ id: 'r1', parentId: 'c1' } as never)
+    state.appendReply({ id: 'r2', parentId: 'c1' } as never)
+
+    expect(state.repliesByComment.value.c1?.map(r => r.id)).toEqual(['r2', 'r1'])
+    expect(state.expanded.value.c1).toBe(true)
+  })
+
+  it('patchReaction updates counts and viewer state in comments and replies', async () => {
+    fetchMock.mockResolvedValue(page([]))
+    const resource = ref('a')
+    const { state } = mount(resource)
+    await Promise.resolve()
+    await nextTick()
+
+    state.comments.value = [{ id: 'c1', reactionCounts: { like: 1 }, viewerReactions: [] } as never]
+    state.repliesByComment.value = {
+      c1: [{ id: 'r1', parentId: 'c1', reactionCounts: {}, viewerReactions: [] } as never],
+    }
+
+    state.patchReaction('c1', 'like', true)
+    state.patchReaction('r1', 'like', true)
+
+    expect(state.comments.value[0]!.reactionCounts).toEqual({ like: 2 })
+    expect(state.comments.value[0]!.viewerReactions).toEqual(['like'])
+    expect(state.repliesByComment.value.c1![0]!.reactionCounts).toEqual({ like: 1 })
+    expect(state.repliesByComment.value.c1![0]!.viewerReactions).toEqual(['like'])
+  })
 })

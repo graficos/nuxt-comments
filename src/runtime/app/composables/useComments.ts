@@ -40,6 +40,10 @@ export interface UseCommentsReturn {
   react: (commentId: string, type: string) => Promise<void>
   /** Remove a reaction of a given type. */
   unreact: (commentId: string, type: string) => Promise<void>
+  /** Insert a newly created reply locally (newest first) and expand its thread. */
+  appendReply: (comment: Comment) => void
+  /** Patch a comment's reaction state locally, without reloading the list. */
+  patchReaction: (commentId: string, type: string, active: boolean) => void
 }
 
 const API_BASE = '/api/_comments'
@@ -196,6 +200,41 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     await $fetch(`${API_BASE}/threads/${commentId}/reactions/${encodeURIComponent(type)}`, { method: 'DELETE' })
   }
 
+  /** Insert a reply that was just created, newest first, and open its thread. */
+  function appendReply(comment: Comment) {
+    const parentId = comment.parentId
+    if (!parentId) return
+    repliesByComment.value = {
+      ...repliesByComment.value,
+      [parentId]: [comment, ...(repliesByComment.value[parentId] ?? [])],
+    }
+    expanded.value = { ...expanded.value, [parentId]: true }
+  }
+
+  /** Patch reaction counts/viewer state for a comment in place (optimistic UI). */
+  function patchReaction(commentId: string, type: string, active: boolean) {
+    function patch(c: Comment): Comment {
+      if (c.id !== commentId) return c
+      const counts = { ...(c.reactionCounts ?? {}) }
+      const next = active ? (counts[type] ?? 0) + 1 : Math.max(0, (counts[type] ?? 0) - 1)
+      const reactionCounts: Record<string, number> = {}
+      for (const [key, value] of Object.entries(counts)) {
+        if (key !== type) reactionCounts[key] = value
+      }
+      if (next > 0) reactionCounts[type] = next
+      const viewerReactions = new Set(c.viewerReactions ?? [])
+      if (active) viewerReactions.add(type)
+      else viewerReactions.delete(type)
+      return { ...c, reactionCounts, viewerReactions: [...viewerReactions] }
+    }
+    comments.value = comments.value.map(patch)
+    const replies: Record<string, Comment[]> = {}
+    for (const [id, list] of Object.entries(repliesByComment.value)) {
+      replies[id] = list.map(patch)
+    }
+    repliesByComment.value = replies
+  }
+
   return {
     comments,
     loading,
@@ -214,6 +253,8 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     deleteComment,
     react,
     unreact,
+    appendReply,
+    patchReaction,
   }
 }
 

@@ -47,12 +47,13 @@ Design notes:
 
 `getCommentsStore(event)` is the single place a concrete store is constructed. A consumer could replace it (for testing or a different backend) while the rest of the package is unchanged. The domain never imports `@cloudflare/workers-types`.
 
-## Extension ports
+## Extension port
 
-Two smaller ports keep infrastructure concerns out of the domain:
+One smaller port keeps an infrastructure concern out of the domain:
 
 - **`RateLimiter`** (`src/runtime/server/utils/rate-limiter.ts`) — `isLimited(event, scope)`. The default in-memory implementation is a development convenience; production should implement this over Cloudflare WAF or the Workers Rate Limiting binding.
-- **`AuthorResolver`** (`src/runtime/server/utils/author-resolver.ts`) — bundled reads do not need it because author display info is snapshotted on the comment row. The port is retained as an optional extension point for backends that resolve author info at read time.
+
+Author display info is snapshotted on the comment row, so bundled reads need no author-resolution port.
 
 ## Future: GitHub Discussions (not implemented)
 
