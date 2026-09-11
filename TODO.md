@@ -101,13 +101,18 @@ primary keys should be declared `NOT NULL`, the comment indexes should include t
 
 **Blocked by:** None (schema is not deployed yet; safe to edit in place).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Both `id` columns are `TEXT PRIMARY KEY NOT NULL`.
-- [ ] The top-level and reply indexes include `id`; a query-plan check shows no temp B-tree for the
+- [x] Both `id` columns are `TEXT PRIMARY KEY NOT NULL`.
+- [x] The top-level and reply indexes include `id`; a query-plan check shows no temp B-tree for the
       pagination sorts.
-- [ ] The duplicate `comment_id`-only reaction index is removed; the UNIQUE index still serves those lookups.
-- [ ] A test asserts the `CHECK (body OR deleted_at)` invariant rejects a row with both null.
+- [x] The duplicate `comment_id`-only reaction index is removed; the UNIQUE index still serves those lookups.
+- [x] A test asserts the `CHECK (body OR deleted_at)` invariant rejects a row with both null.
+
+> **Done:** `id TEXT PRIMARY KEY NOT NULL` on both tables; `idx_comments_resource_top` and
+> `idx_comments_replies` extended with `id`; `idx_reactions_comment` dropped (UNIQUE prefix covers it). New
+> `test/unit/migration.test.ts` asserts NOT NULL PKs, the CHECK invariant, index shape, and a query plan with
+> no TEMP B-TREE. Workers suite 67 pass.
 
 ---
 
