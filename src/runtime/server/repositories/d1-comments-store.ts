@@ -230,53 +230,34 @@ export class D1CommentsStore implements CommentsStore {
   }
 
   async deleteUserData(userId: string): Promise<DeleteUserDataResult> {
-    const commentsCountRow = await this.db.prepare(
-      'SELECT COUNT(*) as c FROM comments WHERE user_id = ? AND deleted_at IS NULL',
-    ).bind(userId).first<{ c: number }>()
-    const reactionsCountRow = await this.db.prepare(
-      'SELECT COUNT(*) as c FROM comment_reactions WHERE user_id = ?',
-    ).bind(userId).first<{ c: number }>()
-
-    // Reactions: hard-delete all.
-    await this.db.prepare('DELETE FROM comment_reactions WHERE user_id = ?').bind(userId).run()
-
-    // Comments with replies: soft-delete + null author snapshots.
-    const withReplies = await this.db.prepare(
-      `SELECT DISTINCT c.id FROM comments c
-       WHERE c.user_id = ? AND c.deleted_at IS NULL
-         AND EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.id)`,
-    ).bind(userId).all<{ id: string }>()
-
-    const preserveIds = withReplies.results.map(r => r.id)
-    if (preserveIds.length > 0) {
-      const placeholders = preserveIds.map(() => '?').join(',')
-      const ts = now()
-      await this.db.prepare(
+    const ts = now()
+    // One atomic transaction, no IN-lists: every statement binds a fixed
+    // number of parameters, so this scales past D1's 100-bound-parameter
+    // limit. Statements run in order within the batch:
+    //   1. drop the user's reactions;
+    //   2. soft-delete (and scrub) comments that anchor a thread;
+    //   3. after (2), every remaining active comment is a leaf -> hard-delete.
+    // A failure anywhere rolls the whole batch back, so the account is never
+    // left half-erased.
+    const [reactions, preserved, removed] = await this.db.batch([
+      this.db.prepare('DELETE FROM comment_reactions WHERE user_id = ?').bind(userId),
+      this.db.prepare(
         `UPDATE comments
            SET body = NULL, deleted_at = ?, deleted_by = 'user-deletion',
                author_name = NULL, author_image = NULL, updated_at = ?
-         WHERE id IN (${placeholders})`,
-      )
-        .bind(ts, ts, ...preserveIds)
-        .run()
-    }
-
-    // Hard-delete user's leaf comments iteratively (FK ON DELETE RESTRICT protects parents).
-    for (;;) {
-      const leafIdsRow = await this.db.prepare(
-        `SELECT id FROM comments
-          WHERE user_id = ? AND deleted_at IS NULL
-            AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
-      ).bind(userId).all<{ id: string }>()
-      const leafIds = leafIdsRow.results.map(r => r.id)
-      if (leafIds.length === 0) break
-      const placeholders = leafIds.map(() => '?').join(',')
-      await this.db.prepare(`DELETE FROM comments WHERE id IN (${placeholders})`).bind(...leafIds).run()
-    }
+         WHERE user_id = ? AND deleted_at IS NULL
+           AND EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
+      ).bind(ts, ts, userId),
+      this.db.prepare(
+        `DELETE FROM comments
+         WHERE user_id = ? AND deleted_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
+      ).bind(userId),
+    ])
 
     return {
-      comments: commentsCountRow?.c ?? 0,
-      reactions: reactionsCountRow?.c ?? 0,
+      comments: (preserved!.meta.changes ?? 0) + (removed!.meta.changes ?? 0),
+      reactions: reactions!.meta.changes ?? 0,
     }
   }
 }

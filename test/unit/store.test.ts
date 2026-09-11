@@ -132,4 +132,71 @@ describe('D1CommentsStore', () => {
     const reactions = await store.getUserReactions('victim', [target.id])
     expect(reactions).toHaveLength(0)
   })
+
+  it('deleteUserData: bulk scale (>100 parents + >100 leaves) is parameter-safe and reports exact counts', async () => {
+    const PARENTS = 120
+    const LEAVES = 120
+    const REACTIONS = 150
+    const ts = new Date().toISOString()
+
+    // Seed directly (the store's create path would need hundreds of round
+    // trips); ids are deterministic and unique to this test.
+    const comments: D1PreparedStatement[] = []
+    for (let i = 0; i < PARENTS; i++) {
+      comments.push(env.DB.prepare(
+        'INSERT INTO comments (id, resource, user_id, parent_id, body, author_name, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
+      ).bind(`bulk-p-${i}`, 'bulk/site', 'bulk-victim', `parent ${i}`, 'Victim', ts, ts))
+      comments.push(env.DB.prepare(
+        'INSERT INTO comments (id, resource, user_id, parent_id, body, author_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).bind(`bulk-r-${i}`, 'bulk/site', 'other', `bulk-p-${i}`, `reply ${i}`, 'Other', ts, ts))
+    }
+    for (let i = 0; i < LEAVES; i++) {
+      comments.push(env.DB.prepare(
+        'INSERT INTO comments (id, resource, user_id, parent_id, body, author_name, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)',
+      ).bind(`bulk-l-${i}`, 'bulk/site', 'bulk-victim', `leaf ${i}`, 'Victim', ts, ts))
+    }
+    const reactions: D1PreparedStatement[] = []
+    for (let i = 0; i < REACTIONS; i++) {
+      // More reactions than leaves -> vary the type so the
+      // UNIQUE(comment_id, user_id, type) key stays valid.
+      const type = i < LEAVES ? 'like' : 'heart'
+      reactions.push(env.DB.prepare(
+        'INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at) VALUES (?, ?, ?, ?, ?)',
+      ).bind(`bulk-rx-${i}`, `bulk-l-${i % LEAVES}`, 'bulk-victim', type, ts))
+    }
+    const seed = [...comments, ...reactions]
+    for (let i = 0; i < seed.length; i += 50) await env.DB.batch(seed.slice(i, i + 50))
+
+    const result = await store.deleteUserData('bulk-victim')
+
+    // Counts reflect exactly what was changed: soft-deleted parents + hard-deleted leaves.
+    expect(result.comments).toBe(PARENTS + LEAVES)
+    expect(result.reactions).toBe(REACTIONS)
+
+    // Every leaf is gone.
+    const remainingLeaves = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM comments WHERE id LIKE 'bulk-l-%'`,
+    ).first<{ c: number }>()
+    expect(remainingLeaves!.c).toBe(0)
+
+    // Every parent is a scrubbed, preserved tombstone.
+    const preservedParents = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM comments
+        WHERE id LIKE 'bulk-p-%' AND deleted_at IS NOT NULL
+          AND deleted_by = 'user-deletion' AND body IS NULL AND author_name IS NULL`,
+    ).first<{ c: number }>()
+    expect(preservedParents!.c).toBe(PARENTS)
+
+    // The other user's replies survive the thread.
+    const survivingReplies = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM comments WHERE id LIKE 'bulk-r-%'`,
+    ).first<{ c: number }>()
+    expect(survivingReplies!.c).toBe(PARENTS)
+
+    // No reaction owned by the deleted user remains.
+    const remainingReactions = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM comment_reactions WHERE user_id = 'bulk-victim'`,
+    ).first<{ c: number }>()
+    expect(remainingReactions!.c).toBe(0)
+  })
 })
