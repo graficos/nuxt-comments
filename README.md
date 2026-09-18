@@ -55,7 +55,7 @@ Vue/Nuxt UI  ──►  Comments API (/api/_comments/...)  ──►  CommentsSe
 ## Install
 
 ```bash
-pnpm add nuxt-comments
+pnpm add @graficos/nuxt-comments
 ```
 
 `@nuxtjs/better-auth` is declared as both a peer dependency and a Nuxt `moduleDependencies` entry. npm/pnpm/yarn auto-install peer dependencies; if your package manager does not, install it explicitly:
