@@ -166,4 +166,4 @@ Preview and production are separate databases. `--local` never touches remote; `
 
 - `nuxt dev` without a binding will return HTTP 500 for comment reads because there is no `event.context.cloudflare` context. Add `nitro-cloudflare-dev` or run via `wrangler dev`.
 - Public reads require no authentication, so you can develop the read UI without OAuth credentials.
-- For authenticated mutations in development, Better Auth's email/password provider is the easiest path; see the [playground README](../playground/README.md).
+- For authenticated mutations in development you need a working Better Auth session. Email/password requires persistent storage and is **unavailable in database-less mode**; configure a Better Auth database or an OAuth provider. See [authentication.md#persistence](./authentication.md#persistence).

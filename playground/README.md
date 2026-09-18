@@ -58,19 +58,15 @@ comments: {
 
 ## Authentication
 
-The default setup supports **email/password** out of the box, so you can develop and test authenticated mutations without any OAuth credentials:
+> [!WARNING]
+> The playground currently runs Better Auth with **no database** — no NuxtHub, no custom adapter — so it falls back to Better Auth's in-memory adapter. **Email/password is unavailable**, sessions do not survive an isolate restart, and they cannot be revoked server-side. See [../docs/authentication.md#persistence](../docs/authentication.md#persistence).
 
-```bash
-# create a user
-curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-up/email \
-  -H 'content-type: application/json' \
-  -d '{"email":"me@example.com","password":"password12345","name":"Me"}'
+To exercise authenticated mutations locally, either:
 
-# create a comment with the session cookie
-curl -b cookies.txt -X POST http://localhost:3000/api/_comments/blog/memorylessness \
-  -H 'content-type: application/json' \
-  -d '{"body":"Hello from the playground"}'
-```
+- configure an OAuth provider (below), or
+- configure a Better Auth database adapter and enable email/password.
+
+Without one of those, the comments UI is read-only.
 
 ### Optional OAuth providers
 

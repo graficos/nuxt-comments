@@ -18,6 +18,38 @@ export default defineNuxtConfig({
 
 The module never overrides your Better Auth configuration. Better Auth remains the single source of truth for auth.
 
+## Persistence: Better Auth needs a database
+
+`@graficos/nuxt-comments` only **reads** the Better Auth session — it never stores users. But Better Auth itself persists `user`, `session`, `account` and `verification` rows, and it needs somewhere to put them (or an explicit decision to run without persistence).
+
+`@nuxtjs/better-auth` ships two built-in database providers:
+
+| Provider | When it is used | What it does |
+| --- | --- | --- |
+| `nuxthub` | `@nuxthub/core` is installed **and** `hub.db` is configured | Uses NuxtHub's Drizzle database. |
+| `none` | Otherwise (the default) | No database. Better Auth uses its **in-memory adapter** (non-durable). |
+
+The module does **not** auto-wire Cloudflare D1. If you are not on NuxtHub, it silently resolves to `none`. This is the source of the requirement below.
+
+### No persistence (the default without NuxtHub)
+
+With no database configured, Better Auth falls back to its **in-memory adapter**: users and sessions exist only inside the current server isolate and vanish on restart or when another isolate handles the request. Better Auth can also run fully stateless with **JWE (JSON Web Encryption)** cookie sessions, but that is opt-in (`session.cookieCache.strategy: 'jwe'`) and is not enabled by this module. Either way there is no durable identity store, with hard limits:
+
+- **No email/password** — credentials need persistent storage.
+- **No server-side session revocation** (and with the in-memory adapter, sessions are not shared across isolates).
+- **No multi-device session management.**
+- **OAuth works**, but account state is not durably recorded for audits or admin tooling.
+
+For a comments system this means a user id does not survive beyond the current isolate, and email/password login is unavailable.
+
+### Recommended: point Better Auth at a database
+
+Better Auth supports any database through adapters. Follow the official [Custom Database guide](https://better-auth.nuxt.dev/guides/custom-database) and set `database` in `server/auth.config.ts`. Cloudflare D1 is a natural fit because the comments package already targets D1: the auth tables and the comment tables can live in the same database (or in separate D1 bindings). Create Better Auth's tables with `npx auth@latest generate` (or write the DDL yourself) and apply them with your D1 migration workflow.
+
+> When NuxtHub **is** installed, the module injects its own `database` and a `database` you set in `defineServerAuth()` is ignored. This section applies when NuxtHub is absent — the common case for this package.
+
+The comments schema deliberately stores **no foreign key** to Better Auth's tables (see [Identity model](#identity-model)), so auth and comments can live in different databases.
+
 ## Consumer configuration
 
 Create the standard Better Auth files (the Better Auth module scaffolds them if missing):

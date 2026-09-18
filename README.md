@@ -47,7 +47,8 @@ Vue/Nuxt UI  ──►  Comments API (/api/_comments/...)  ──►  CommentsSe
 
 - Nuxt `>= 4.0.0`
 - [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev) (installed automatically as a peer + module dependency in npm/pnpm; see [docs/authentication.md](./docs/authentication.md))
-- A Cloudflare D1 database and a Wrangler binding (see [docs/cloudflare-d1.md](./docs/cloudflare-d1.md))
+- A Cloudflare D1 database and a Wrangler binding **for comments** (see [docs/cloudflare-d1.md](./docs/cloudflare-d1.md))
+- A **Better Auth database** for durable identities — or accept the [no-persistence fallback](./docs/authentication.md#persistence) (OAuth-only, no email/password, no server-side session revocation). Cloudflare D1 can host both the auth tables and the comments.
 - `wrangler` available to run migrations
 
 ## Install
@@ -118,6 +119,8 @@ export default defineServerAuth({
 NUXT_BETTER_AUTH_SECRET=<at least 32 random chars>
 NUXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
+
+> **Auth persistence.** `@nuxtjs/better-auth` only auto-configures a database when NuxtHub is installed. Without it, it falls back to Better Auth's **in-memory adapter** (users and sessions do not survive the current isolate): **email/password is unavailable**, and sessions cannot be revoked server-side. The comments package only reads the session, so it works either way — but for durable identities, point Better Auth at a database in `server/auth.config.ts`. Cloudflare D1 can host both the auth tables and the comments. See [docs/authentication.md#persistence](./docs/authentication.md#persistence).
 
 Run the package migrations against your local D1. Either copy the shipped SQL into your own `migrations/` folder, or point a Wrangler config's `migrations_dir` at the package:
 
