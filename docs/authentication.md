@@ -1,6 +1,6 @@
 # Authentication
 
-`nuxt-comments` does **not** implement authentication. It consumes the session provided by [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev). This keeps provider coverage open-ended — Google, GitHub, Apple, Discord, email/password, or any other provider Better Auth supports — with no provider-specific code in this package.
+`@graficos/nuxt-comments` does **not** implement authentication. It consumes the session provided by [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev). This keeps provider coverage open-ended — Google, GitHub, Apple, Discord, email/password, or any other provider Better Auth supports — with no provider-specific code in this package.
 
 ## How the dependency works
 
@@ -11,9 +11,9 @@ The module declares `@nuxtjs/better-auth` in two places:
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['nuxt-comments'], // @nuxtjs/better-auth is added via moduleDependencies
-  comments: { database: { binding: 'DB' } },
-})
+  modules: ["nuxt-comments"], // @nuxtjs/better-auth is added via moduleDependencies
+  comments: { database: { binding: "DB" } },
+});
 ```
 
 The module never overrides your Better Auth configuration. Better Auth remains the single source of truth for auth.
@@ -24,7 +24,7 @@ Create the standard Better Auth files (the Better Auth module scaffolds them if 
 
 ```ts
 // server/auth.config.ts
-import { defineServerAuth } from '@nuxtjs/better-auth/config'
+import { defineServerAuth } from "@nuxtjs/better-auth/config";
 
 export default defineServerAuth({
   socialProviders: {
@@ -37,14 +37,14 @@ export default defineServerAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
   },
-})
+});
 ```
 
 ```ts
 // app/auth.config.ts
-import { defineClientAuth } from '@nuxtjs/better-auth/config'
+import { defineClientAuth } from "@nuxtjs/better-auth/config";
 
-export default defineClientAuth({})
+export default defineClientAuth({});
 ```
 
 `.env`:
@@ -87,16 +87,20 @@ Server-side, the API reads the session via the `getUserSession(event)` Nitro hel
 
 ```ts
 // src/runtime/server/services/auth.ts (package internal)
-const session = await getUserSession(event)
-if (!session?.user) return null
-return { id: session.user.id, name: session.user.name ?? null, image: session.user.image ?? null }
+const session = await getUserSession(event);
+if (!session?.user) return null;
+return {
+  id: session.user.id,
+  name: session.user.name ?? null,
+  image: session.user.image ?? null,
+};
 ```
 
 Client-side, `useCommentsSession()` wraps Better Auth's `useUserSession()` and `useAuthClient()`:
 
 ```ts
-const { user, status, loggedIn, ready, signIn, signOut } = useCommentsSession()
-await signIn('github') // provider name is consumer-owned
+const { user, status, loggedIn, ready, signIn, signOut } = useCommentsSession();
+await signIn("github"); // provider name is consumer-owned
 ```
 
 Reads are public. Creating, editing, deleting, replying and reacting all require an authenticated session.

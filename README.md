@@ -1,10 +1,8 @@
-# nuxt-comments
+# @graficos/nuxt-comments
 
 An embeddable, **unstyled** comments system for **Nuxt 4**, backed by **Cloudflare D1** and authenticated through the host application's **Better Auth** setup.
 
-`nuxt-comments` is a reusable Nuxt module — not a hosted widget. It ships the threaded comments primitive (data model, API, composables, unstyled components) and leaves identity to [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev) and presentation to you.
-
-> The npm package name is provisional (`nuxt-comments`) until first publish. Nothing in the implementation depends on it besides `package.json` and the module `meta.name`.
+`@graficos/nuxt-comments` is a reusable Nuxt module — not a hosted widget. It ships the threaded comments primitive (data model, API, composables, unstyled components) and leaves identity to [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev) and presentation to you.
 
 ## Features
 
@@ -125,7 +123,7 @@ Run the package migrations against your local D1. Either copy the shipped SQL in
 
 ```bash
 # recommended: copy the package migrations into your app's migrations/ dir
-cp -r node_modules/nuxt-comments/migrations/* ./migrations/
+cp -r node_modules/@graficos/nuxt-comments/migrations/* ./migrations/
 
 # apply locally, then remotely when deploying
 npx wrangler d1 migrations apply my-comments --local

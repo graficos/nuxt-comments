@@ -107,15 +107,15 @@ The comment body is always rendered as **escaped text**, never `v-html`. The bui
 
 Renders one comment and recursively renders its loaded replies.
 
-| Prop               | Type                        | Description                            |
-| ------------------ | --------------------------- | -------------------------------------- |
-| `comment`          | `Comment`                   | The comment to render.                 |
-| `canEdit`          | `boolean`                   | Whether the viewer may edit/delete this comment. Use at the top level. |
+| Prop               | Type                        | Description                                                                                                            |
+| ------------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `comment`          | `Comment`                   | The comment to render.                                                                                                 |
+| `canEdit`          | `boolean`                   | Whether the viewer may edit/delete this comment. Use at the top level.                                                 |
 | `viewerUserId`     | `string`                    | Current viewer id. When set, `canEdit` is derived per comment, so nested replies are checked against their own author. |
-| `reactionTypes`    | `string[]`                  | Reaction types to render.              |
-| `repliesByComment` | `Record<string, Comment[]>` | Loaded replies keyed by comment id.    |
-| `replyHasMore`     | `Record<string, boolean>`   | Whether more replies can be loaded.    |
-| `replyExpanded`    | `Record<string, boolean>`   | Whether a thread is expanded.          |
+| `reactionTypes`    | `string[]`                  | Reaction types to render.                                                                                              |
+| `repliesByComment` | `Record<string, Comment[]>` | Loaded replies keyed by comment id.                                                                                    |
+| `replyHasMore`     | `Record<string, boolean>`   | Whether more replies can be loaded.                                                                                    |
+| `replyExpanded`    | `Record<string, boolean>`   | Whether a thread is expanded.                                                                                          |
 
 Events: `reply`, `edit`, `delete`, `react`, `unreact`, `toggle-replies`, `load-replies`.
 
@@ -201,9 +201,12 @@ import type {
   Author,
   Cursor,
   Paginated,
-} from "nuxt-comments/types";
-import type { CommentsStore, DeleteUserDataResult } from "nuxt-comments/server";
-import type { ModuleOptions } from "nuxt-comments";
+} from "@graficos/nuxt-comments/types";
+import type {
+  CommentsStore,
+  DeleteUserDataResult,
+} from "@graficos/nuxt-comments/server";
+import type { ModuleOptions } from "@graficos/nuxt-comments";
 ```
 
 | Type           | Description                                                                                                                                                                                              |

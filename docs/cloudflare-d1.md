@@ -1,6 +1,6 @@
 # Cloudflare & D1
 
-The MVP persistence backend is **Cloudflare D1**. `nuxt-comments` only needs the **binding name** — it never provisions infrastructure, creates databases, or assumes a binding called `DB`.
+The MVP persistence backend is **Cloudflare D1**. `@graficos/nuxt-comments` only needs the **binding name** — it never provisions infrastructure, creates databases, or assumes a binding called `DB`.
 
 ## 1. Create a D1 database
 
@@ -21,9 +21,9 @@ JSONC (`wrangler.jsonc` / `wrangler.json`):
       "binding": "DB",
       "database_name": "my-comments",
       "database_id": "<database-uuid>",
-      "preview_database_id": "<optional-preview-uuid>"
-    }
-  ]
+      "preview_database_id": "<optional-preview-uuid>",
+    },
+  ],
 }
 ```
 
@@ -43,10 +43,10 @@ The **binding name** (`DB`) is what your Worker sees as `env.DB`. Set the same n
 export default defineNuxtConfig({
   comments: {
     database: {
-      binding: 'DB', // must match the `binding` value in your Wrangler file
+      binding: "DB", // must match the `binding` value in your Wrangler file
     },
   },
-})
+});
 ```
 
 At runtime the module reads the binding from `event.context.cloudflare.env[comments.database.binding]`. If it is missing, the API returns a 500 with a clear server-side error message.
@@ -97,9 +97,9 @@ If you prefer not to copy files, set `migrations_dir` on the D1 binding in a Wra
       "binding": "DB",
       "database_name": "my-comments",
       "database_id": "<database-uuid>",
-      "migrations_dir": "node_modules/nuxt-comments/migrations"
-    }
-  ]
+      "migrations_dir": "node_modules/nuxt-comments/migrations",
+    },
+  ],
 }
 ```
 
@@ -121,8 +121,8 @@ Add [`nitro-cloudflare-dev`](https://github.com/pi0/nitro-cloudflare-dev) to you
 
 ```ts
 export default defineNuxtConfig({
-  modules: ['nitro-cloudflare-dev', 'nuxt-comments'],
-})
+  modules: ["nitro-cloudflare-dev", "nuxt-comments"],
+});
 ```
 
 Apply migrations locally first, then `nuxt dev`:

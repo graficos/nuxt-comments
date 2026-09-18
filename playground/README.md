@@ -1,6 +1,6 @@
-# nuxt-comments playground
+# @graficos/nuxt-comments playground
 
-A small Nuxt 4 app that exercises the local `nuxt-comments` module. It is the canonical integration environment: the module is loaded from `../src/module`, D1 bindings come from Miniflare, and authentication runs through Better Auth.
+A small Nuxt 4 app that exercises the local `@graficos/nuxt-comments` module. It is the canonical integration environment: the module is loaded from `../src/module`, D1 bindings come from Miniflare, and authentication runs through Better Auth.
 
 The playground owns its **styling** and its **login UI** — the package ships neither.
 
