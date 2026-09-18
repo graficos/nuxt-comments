@@ -1,10 +1,9 @@
 /**
  * Test-only session helper for the workers runtime.
  *
- * The module's server auth utility (`services/auth.ts`) calls the
- * `getUserSession(event)` Nitro auto-import provided by
- * `@nuxtjs/better-auth`. In tests we install our own global
- * implementation and control the viewer per test.
+ * The module's server auth utility (`services/auth.ts`) imports
+ * `getUserSession` from `#imports`, which the workers test runtime aliases to
+ * `test/mocks/imports.ts`. That mock reads the viewer from here.
  */
 export interface TestUser {
   id: string
@@ -21,7 +20,3 @@ export function setTestUser(user: TestUser | null): void {
 export function getTestUser(): TestUser | null {
   return currentUser
 }
-
-Object.assign(globalThis, {
-  getUserSession: async (_event: unknown) => ({ user: currentUser }),
-})
