@@ -79,6 +79,13 @@ export default defineNuxtConfig({
     database: {
       binding: "DB", // Same as the Wrangler binding name for your D1 database for the comments
     },
+    // Opt-in: persist Better Auth users/sessions in D1 (email/password, OAuth,
+    // revocation). Omit to leave Better Auth on its in-memory default.
+    auth: {
+      database: {
+        binding: "DB", // Binding for Better Auth's tables; may equal the comments binding
+      },
+    },
   },
 });
 ```
@@ -120,7 +127,7 @@ NUXT_BETTER_AUTH_SECRET=<at least 32 random chars>
 NUXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-> **Auth persistence.** `@nuxtjs/better-auth` only auto-configures a database when NuxtHub is installed. Without it, it falls back to Better Auth's **in-memory adapter** (users and sessions do not survive the current isolate): **email/password is unavailable**, and sessions cannot be revoked server-side. The comments package only reads the session, so it works either way — but for durable identities, point Better Auth at a database in `server/auth.config.ts`. Cloudflare D1 can host both the auth tables and the comments. See [docs/authentication.md#persistence](./docs/authentication.md#persistence).
+> **Auth persistence.** Better Auth stores users, sessions and accounts. Without a database, `@nuxtjs/better-auth` falls back to Better Auth's **in-memory adapter** (email/password unavailable, sessions do not survive the current isolate). Set `comments.auth.database.binding` to persist them in D1. See [docs/authentication.md#turnkey-d1-persistence-opt-in](./docs/authentication.md#persistence).
 
 Run the package migrations against your local D1. Either copy the shipped SQL into your own `migrations/` folder, or point a Wrangler config's `migrations_dir` at the package:
 
@@ -132,6 +139,8 @@ cp -r node_modules/@graficos/nuxt-comments/migrations/* ./migrations/
 npx wrangler d1 migrations apply my-comments --local
 npx wrangler d1 migrations apply my-comments --remote
 ```
+
+> **Auth tables.** `migrations/auth/` holds Better Auth's tables and is only needed when you set `comments.auth.database.binding`. Wrangler's `migrations_dir` is not recursive, so apply it with a separate Wrangler config pointing at that folder. See [docs/authentication.md](./docs/authentication.md#turnkey-d1-persistence-opt-in).
 
 Then use the component:
 

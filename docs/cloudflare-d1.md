@@ -58,10 +58,13 @@ At runtime the module reads the binding from `event.context.cloudflare.env[comme
 The package ships SQL migrations in `migrations/` (inside the published package: `node_modules/nuxt-comments/migrations/`):
 
 ```text
-0001_init.sql
+0001_init.sql              # comments tables
+auth/0001_better_auth.sql  # Better Auth tables (only if comments.auth.database.binding is set)
 ```
 
 **The package never runs migrations during Nuxt startup.** Applying migrations modifies your database and must be treated as a deployment operation, just like any other D1 migration.
+
+> **Auth tables.** `migrations/auth/` is a separate migration set for the [opt-in D1 Better Auth provider](./authentication.md#turnkey-d1-persistence-opt-in). Wrangler's `migrations_dir` is not recursive, so apply it with its own Wrangler config (or copy `migrations/auth/*` into a dedicated folder) and run `wrangler d1 migrations apply` again. It may target the same database as the comments.
 
 ### Recommended workflow: copy migrations into your app
 

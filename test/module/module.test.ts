@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { loadNuxt } from '@nuxt/kit'
 import type { Nuxt, NuxtHooks } from '@nuxt/schema'
-import Module from '../../src/module'
+import Module, { buildD1DatabaseCode } from '../../src/module'
 import type { ModuleOptions } from '../../src/types'
 
 let nuxt: Nuxt
@@ -36,6 +36,13 @@ describe('nuxt-comments module (static)', () => {
     const deps = await Module.getModuleDependencies!(nuxt) as Record<string, { version?: string }> | undefined
     expect(deps?.['@nuxtjs/better-auth']).toBeDefined()
     expect(deps?.['@nuxtjs/better-auth']?.version).toBe('>=0.3.0 <1.0.0')
+  })
+
+  it('generates a D1 database factory that names the binding', () => {
+    const code = buildD1DatabaseCode('AUTH_DB')
+    expect(code).toContain('"AUTH_DB"')
+    expect(code).toContain('not found on event.context.cloudflare.env')
+    expect(code).toContain('export const db = undefined')
   })
 })
 
@@ -94,5 +101,21 @@ describe('nuxt-comments module (installed in the playground app)', () => {
     // module dependency was installed without the consumer listing it.
     const routes = nuxt.options.serverHandlers.map(h => h.route)
     expect(routes).toContain('/api/auth/**')
+  })
+
+  it('registers the opt-in D1 database provider for Better Auth', async () => {
+    const providers: Record<string, { priority?: number, isEnabled?: (ctx: unknown) => boolean, buildDatabaseCode: () => string }> = {}
+    await nuxt.callHook('better-auth:database:providers', providers)
+
+    const provider = providers['comments-d1']
+    expect(provider).toBeDefined()
+    expect(provider!.priority).toBe(50)
+    expect(provider!.isEnabled!({ hasHubDbAvailable: false, clientOnly: false })).toBe(true)
+    expect(provider!.isEnabled!({ hasHubDbAvailable: true, clientOnly: false })).toBe(false)
+
+    const code = provider!.buildDatabaseCode()
+    expect(code).toContain('"DB"')
+    expect(code).toContain('return db')
+    expect(code).toContain('export const db = undefined')
   })
 })

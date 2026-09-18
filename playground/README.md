@@ -18,9 +18,10 @@ From the repository root:
 
 ```bash
 pnpm install
-pnpm dev:prepare        # stub-build the module + prepare the playground
-pnpm playground:migrate # apply the package migrations to local D1
-pnpm dev                # http://localhost:3000
+pnpm dev:prepare             # stub-build the module + prepare the playground
+pnpm playground:migrate      # apply the comments migrations to local D1
+pnpm playground:migrate:auth # apply the Better Auth tables to local D1
+pnpm dev                     # http://localhost:3000
 ```
 
 - `/` links to sample posts
@@ -44,29 +45,39 @@ The playground uses [`nitro-cloudflare-dev`](https://github.com/pi0/nitro-cloudf
 }
 ```
 
-Local D1 state persists in `playground/.wrangler/state`. `pnpm run playground:migrate` applies the package migrations locally.
+Local D1 state persists in `playground/.wrangler/state`. `pnpm run playground:migrate` applies the comments migrations locally; `pnpm run playground:migrate:auth` applies the Better Auth tables from `migrations/auth/` using `playground/wrangler.auth.jsonc`.
 
-The module option matches the binding:
+The module options match the binding:
 
 ```ts
 comments: {
   database: {
     binding: "DB";
   }
+  // opt-in D1-backed Better Auth
+  auth: {
+    database: {
+      binding: "DB";
+    }
+  }
 }
 ```
 
 ## Authentication
 
-> [!WARNING]
-> The playground currently runs Better Auth with **no database** — no NuxtHub, no custom adapter — so it falls back to Better Auth's in-memory adapter. **Email/password is unavailable**, sessions do not survive an isolate restart, and they cannot be revoked server-side. See [../docs/authentication.md#persistence](../docs/authentication.md#persistence).
+The playground opts into **D1-backed Better Auth** (`comments.auth.database.binding: "DB"`), so **email/password works out of the box** once `pnpm playground:migrate:auth` has run:
 
-To exercise authenticated mutations locally, either:
+```bash
+# create a user
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/sign-up/email \
+  -H 'content-type: application/json' \
+  -d '{"email":"me@example.com","password":"password12345","name":"Me"}'
 
-- configure an OAuth provider (below), or
-- configure a Better Auth database adapter and enable email/password.
-
-Without one of those, the comments UI is read-only.
+# create a comment with the session cookie
+curl -b cookies.txt -X POST http://localhost:3000/api/_comments/blog/memorylessness \
+  -H 'content-type: application/json' \
+  -d '{"body":"Hello from the playground"}'
+```
 
 ### Optional OAuth providers
 

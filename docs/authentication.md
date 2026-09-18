@@ -29,7 +29,7 @@ The module never overrides your Better Auth configuration. Better Auth remains t
 | `nuxthub` | `@nuxthub/core` is installed **and** `hub.db` is configured | Uses NuxtHub's Drizzle database. |
 | `none` | Otherwise (the default) | No database. Better Auth uses its **in-memory adapter** (non-durable). |
 
-The module does **not** auto-wire Cloudflare D1. If you are not on NuxtHub, it silently resolves to `none`. This is the source of the requirement below.
+If you are not on NuxtHub, `@nuxtjs/better-auth` silently resolves to `none`. This package can add a third provider — **opt-in D1 persistence** — described below.
 
 ### No persistence (the default without NuxtHub)
 
@@ -42,11 +42,40 @@ With no database configured, Better Auth falls back to its **in-memory adapter**
 
 For a comments system this means a user id does not survive beyond the current isolate, and email/password login is unavailable.
 
-### Recommended: point Better Auth at a database
+### Turnkey D1 persistence (opt-in)
 
-Better Auth supports any database through adapters. Follow the official [Custom Database guide](https://better-auth.nuxt.dev/guides/custom-database) and set `database` in `server/auth.config.ts`. Cloudflare D1 is a natural fit because the comments package already targets D1: the auth tables and the comment tables can live in the same database (or in separate D1 bindings). Create Better Auth's tables with `npx auth@latest generate` (or write the DDL yourself) and apply them with your D1 migration workflow.
+Point Better Auth at a D1 binding:
 
-> When NuxtHub **is** installed, the module injects its own `database` and a `database` you set in `defineServerAuth()` is ignored. This section applies when NuxtHub is absent — the common case for this package.
+```ts
+export default defineNuxtConfig({
+  modules: ["nuxt-comments"],
+  comments: {
+    database: { binding: "DB" },
+    auth: { database: { binding: "DB" } }, // enables D1-backed Better Auth
+  },
+});
+```
+
+That registers a D1 database provider with `@nuxtjs/better-auth` through its `better-auth:database:providers` hook. At request time the module hands Better Auth the raw D1 binding, and Better Auth builds its bundled Kysely D1 adapter. **No extra dependency and no `server/auth.config.ts` change is required** — email/password, OAuth account linking, session revocation and multi-device sessions all work.
+
+Then create the auth tables by applying the shipped migration. Wrangler's `migrations_dir` is not recursive, so point a Wrangler config's `migrations_dir` at `migrations/auth` (or copy that folder into its own migrations directory):
+
+```bash
+cp -r node_modules/@graficos/nuxt-comments/migrations/auth ./migrations/
+
+# apply with a config whose D1 binding sets migrations_dir: "migrations/auth"
+npx wrangler d1 migrations apply my-comments --local   # --remote for production
+```
+
+The D1 binding may be the same as the comments binding (both sets of tables live together) or a separate one. The migration creates `user`, `session`, `account` and `verification`; **Better Auth plugin tables are not included** — add them with `npx auth@latest generate` if you enable plugins.
+
+> **NuxtHub precedence.** If `@nuxthub/core` is installed with `hub.db`, NuxtHub's provider wins and this option is ignored. If you also set `database` in `server/auth.config.ts`, the module's provider takes precedence — don't set both.
+
+### Any other database
+
+Better Auth supports any database through adapters. Follow the official [Custom Database guide](https://better-auth.nuxt.dev/guides/custom-database) and set `database` in `server/auth.config.ts`.
+
+> When NuxtHub **is** installed, the module injects its own `database` and a `database` you set in `defineServerAuth()` is ignored. This path applies when NuxtHub is absent and the opt-in D1 provider is not enabled.
 
 The comments schema deliberately stores **no foreign key** to Better Auth's tables (see [Identity model](#identity-model)), so auth and comments can live in different databases.
 

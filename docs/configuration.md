@@ -15,6 +15,11 @@ export default defineNuxtConfig({
     database: {
       binding: 'DB',
     },
+    auth: {
+      database: {
+        binding: 'DB',
+      },
+    },
     pagination: {
       pageSize: 20,
       maxPageSize: 100,
@@ -39,6 +44,7 @@ export default defineNuxtConfig({
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `database.binding` | `string` | `'DB'` | Name of the D1 binding to read from `event.context.cloudflare.env`. Must match your Wrangler file. |
+| `auth.database.binding` | `string` | – | D1 binding holding Better Auth's tables. **Opt-in:** when set, Better Auth is backed by D1 (email/password, sessions, revocation). Omit to leave Better Auth on its in-memory default. See [authentication.md](./authentication.md#turnkey-d1-persistence-opt-in). |
 | `pagination.pageSize` | `number` | `20` | Default page size for list endpoints and the client composable. |
 | `pagination.maxPageSize` | `number` | `100` | Hard cap on `?limit=` values. Requests above this are clamped, never rejected. |
 | `reactions.enabled` | `boolean` | `true` | Turns the reaction endpoints and UI data on/off. |

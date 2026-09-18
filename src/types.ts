@@ -25,6 +25,16 @@ export interface ModuleOptions {
     /** Prefix for exposed components. Set to '' for <Comments>. @default 'Nuxt' */
     prefix?: string
   }
+  auth?: {
+    database?: {
+      /**
+       * D1 binding holding Better Auth's tables (user/session/account/verification).
+       * Setting this enables D1-backed Better Auth; omit it to leave Better Auth
+       * on its own (in-memory) default. Must match a binding in your Wrangler file.
+       */
+      binding?: string
+    }
+  }
   /** Rate limiter strategy. 'memory' is single-isolate only. @default 'memory' */
   rateLimiter?: 'none' | 'memory'
   /**

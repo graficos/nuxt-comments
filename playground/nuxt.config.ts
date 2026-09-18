@@ -27,6 +27,13 @@ export default defineNuxtConfig({
     database: {
       binding: 'DB',
     },
+    // Opt-in: persist Better Auth users/sessions in the same D1 database.
+    // Requires the auth migrations in ../migrations/auth to be applied.
+    auth: {
+      database: {
+        binding: 'DB',
+      },
+    },
     reactions: {
       enabled: true,
       types: ['like', 'heart', 'laugh'],

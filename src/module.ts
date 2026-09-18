@@ -1,8 +1,33 @@
+/// <reference types="@nuxtjs/better-auth" />
+
 import { defu } from 'defu'
 import { defineNuxtModule, addComponent, addImports, addServerHandler, createResolver } from '@nuxt/kit'
 import type { ModuleOptions } from './types'
 
 export type { ModuleOptions } from './types'
+
+/**
+ * Generate the `#auth/database` module source for the opt-in D1 provider.
+ *
+ * `createDatabase(event)` returns the raw D1 binding. `@nuxtjs/better-auth`
+ * passes it to Better Auth, which detects the D1 API (`batch`/`exec`/`prepare`)
+ * and builds Kysely with its bundled `D1SqliteDialect` — so no adapter
+ * dependency is required.
+ */
+export function buildD1DatabaseCode(binding: string): string {
+  const name = JSON.stringify(binding)
+  return `export function createDatabase(event) {
+  const bindingName = ${name}
+  const env = event && event.context && event.context.cloudflare && event.context.cloudflare.env
+  const db = env && env[bindingName]
+  if (!db) {
+    throw new Error(\`[nuxt-comments] Better Auth D1 binding "\${bindingName}" not found on event.context.cloudflare.env. Set comments.auth.database.binding to a configured D1 binding and ensure the cloudflare nitro preset is active.\`)
+  }
+  return db
+}
+export const db = undefined
+`
+}
 
 const defaults: ModuleOptions = {
   database: {
@@ -54,6 +79,19 @@ export default defineNuxtModule<ModuleOptions>({
     // `types` has no entry in `defaults` (defu concatenates arrays), so the
     // fallback is applied here. User-provided types pass through untouched.
     const reactionTypes = options.reactions?.types ?? ['like']
+
+    // Opt-in D1-backed Better Auth. `@nuxtjs/better-auth` calls this hook
+    // during `modules:done`, after every module's setup, so registering here
+    // is in time. NuxtHub's provider (priority 100) still wins when present.
+    nuxt.hook('better-auth:database:providers', (providers) => {
+      const authBinding = options.auth?.database?.binding
+      if (!authBinding) return
+      providers['comments-d1'] = {
+        priority: 50,
+        isEnabled: ({ hasHubDbAvailable, clientOnly }) => !hasHubDbAvailable && !clientOnly,
+        buildDatabaseCode: () => buildD1DatabaseCode(authBinding),
+      }
+    })
 
     // Merge options into runtimeConfig (server-only + public).
     nuxt.options.runtimeConfig.comments = defu(

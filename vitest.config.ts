@@ -15,14 +15,18 @@ export default defineConfig({
     cloudflareTest(async () => {
       const migrationsPath = path.join(root, 'migrations')
       const migrations = await readD1Migrations(migrationsPath)
+      const authMigrations = await readD1Migrations(path.join(root, 'migrations/auth'))
 
       return {
         miniflare: {
           // D1 binding named `DB` (the module's default binding name).
           d1Databases: ['DB'],
-          // Test-only binding holding the package's D1 migrations, applied
+          // Test-only bindings holding the package's D1 migrations, applied
           // by the setup file via `applyD1Migrations()`.
-          bindings: { TEST_MIGRATIONS: migrations },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            TEST_AUTH_MIGRATIONS: authMigrations,
+          },
         },
       }
     }),
