@@ -13,6 +13,11 @@ export type { ModuleOptions } from './types'
  * passes it to Better Auth, which detects the D1 API (`batch`/`exec`/`prepare`)
  * and builds Kysely with its bundled `D1SqliteDialect` — so no adapter
  * dependency is required.
+ *
+ * During prerender there is no Cloudflare runtime, so the binding is absent.
+ * Return `undefined` there and let Better Auth fall back to its in-memory
+ * adapter (prerendered HTML is the unauthenticated shell only); at runtime a
+ * missing binding is still a hard error.
  */
 export function buildD1DatabaseCode(binding: string): string {
   const name = JSON.stringify(binding)
@@ -21,6 +26,7 @@ export function buildD1DatabaseCode(binding: string): string {
   const env = event && event.context && event.context.cloudflare && event.context.cloudflare.env
   const db = env && env[bindingName]
   if (!db) {
+    if (import.meta.prerender) return undefined
     throw new Error(\`[nuxt-comments] Better Auth D1 binding "\${bindingName}" not found on event.context.cloudflare.env. Set comments.auth.database.binding to a configured D1 binding and ensure the cloudflare nitro preset is active.\`)
   }
   return db

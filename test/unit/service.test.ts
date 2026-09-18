@@ -57,17 +57,17 @@ class MemoryStore implements CommentsStore {
     return c
   }
 
-  async deleteComment(id: string, _policy: DeletionPolicy): Promise<void> {
+  async deleteComment(id: string, policy: DeletionPolicy): Promise<void> {
     const c = this.comments.get(id)
     if (!c) return
-    if ([...this.comments.values()].some(r => r.parentId === id)) {
-      c.body = null
-      c.deletedAt = new Date().toISOString()
-      c.deletedBy = _policy
-    }
-    else {
+    // Author deletion always tombstones; admin user-deletion hard-deletes leaves.
+    if (policy === 'user-deletion' && ![...this.comments.values()].some(r => r.parentId === id)) {
       this.comments.delete(id)
+      return
     }
+    c.body = null
+    c.deletedAt = new Date().toISOString()
+    c.deletedBy = policy
   }
 
   async hasReplies(commentId: string): Promise<boolean> {
@@ -244,7 +244,11 @@ describe('CommentsService', () => {
       const { service } = makeService({ store })
       const c = await service.createComment({ resource: 'blog/x', body: 'bye' })
       await service.deleteComment(c.id)
-      expect(await store.getComment(c.id)).toBeNull()
+      const got = await store.getComment(c.id)
+      expect(got).not.toBeNull()
+      expect(got!.body).toBeNull()
+      expect(got!.deletedAt).not.toBeNull()
+      expect(got!.deletedBy).toBe('author')
     })
     it('rejects deleting another user\'s comment', async () => {
       const { service } = makeService({ store })

@@ -71,11 +71,20 @@ describe('D1CommentsStore', () => {
     expect(page3.hasMore).toBe(false)
   })
 
-  it('hard-deletes a leaf comment (no replies)', async () => {
+  it('soft-deletes a leaf comment on author deletion (tombstone)', async () => {
     const c = await store.createComment({ resource: '/blog/del', userId: 'u1', body: 'bye' })
     await store.deleteComment(c.id, 'author')
     const got = await store.getComment(c.id)
-    expect(got).toBeNull()
+    expect(got).not.toBeNull()
+    expect(got!.body).toBeNull()
+    expect(got!.deletedAt).not.toBeNull()
+    expect(got!.deletedBy).toBe('author')
+  })
+
+  it('user-deletion hard-deletes a leaf comment', async () => {
+    const c = await store.createComment({ resource: '/blog/del', userId: 'u1', body: 'bye' })
+    await store.deleteComment(c.id, 'user-deletion')
+    expect(await store.getComment(c.id)).toBeNull()
   })
 
   it('updateComment rejects cleanly when the comment is missing or soft-deleted', async () => {

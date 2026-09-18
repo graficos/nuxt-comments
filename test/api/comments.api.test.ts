@@ -149,7 +149,7 @@ describe('comments API (workers runtime)', () => {
       expect(res.body.body).toBe('after')
     })
 
-    it('deletes a leaf comment (author only)', async () => {
+    it('soft-deletes a leaf comment (author only)', async () => {
       const created = await api<{ id: string }>('POST', '/api/_comments/blog/delete', {
         body: { body: 'bye' },
         user: ALICE,
@@ -160,8 +160,11 @@ describe('comments API (workers runtime)', () => {
       const ok = await api('DELETE', `/api/_comments/threads/${created.body.id}`, { user: ALICE })
       expect(ok.status).toBe(200)
 
-      const list = await api<{ items: unknown[] }>('GET', '/api/_comments/blog/delete')
-      expect(list.body.items).toHaveLength(0)
+      const list = await api<{ items: { id: string, body: string | null, deletedAt: string | null }[] }>('GET', '/api/_comments/blog/delete')
+      expect(list.body.items).toHaveLength(1)
+      expect(list.body.items[0]!.id).toBe(created.body.id)
+      expect(list.body.items[0]!.body).toBeNull()
+      expect(list.body.items[0]!.deletedAt).not.toBeNull()
     })
   })
 

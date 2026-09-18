@@ -177,18 +177,23 @@ export class D1CommentsStore implements CommentsStore {
 
   async deleteComment(id: string, policy: DeletionPolicy): Promise<void> {
     const ts = now()
-    // Delete only when the comment has no replies. The NOT EXISTS is part of
-    // the same statement, so a reply inserted concurrently cannot turn this
-    // into an FK RESTRICT error.
-    const res = await this.db.prepare(
-      `DELETE FROM comments WHERE id = ?
-         AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = ?)`,
-    ).bind(id, id).run()
-    if ((res.meta.changes ?? 0) > 0) {
-      // Hard-delete (cascades to comment_reactions via FK ON DELETE CASCADE).
-      return
+    // Author deletion always leaves a tombstone (`[deleted]`) so replies keep
+    // their thread context and the UI behaves the same for comments and replies.
+    // Admin user-deletion still hard-deletes leaves.
+    if (policy === 'user-deletion') {
+      // Delete only when the comment has no replies. The NOT EXISTS is part of
+      // the same statement, so a reply inserted concurrently cannot turn this
+      // into an FK RESTRICT error.
+      const res = await this.db.prepare(
+        `DELETE FROM comments WHERE id = ?
+           AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = ?)`,
+      ).bind(id, id).run()
+      if ((res.meta.changes ?? 0) > 0) {
+        // Hard-delete (cascades to comment_reactions via FK ON DELETE CASCADE).
+        return
+      }
     }
-    // Has replies (or was already removed): keep a tombstone and clear reactions.
+    // Keep a tombstone and clear reactions.
     await this.db.prepare(
       'UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
     )

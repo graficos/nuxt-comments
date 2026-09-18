@@ -43,6 +43,8 @@ describe('nuxt-comments module (static)', () => {
     expect(code).toContain('"AUTH_DB"')
     expect(code).toContain('not found on event.context.cloudflare.env')
     expect(code).toContain('export const db = undefined')
+    // prerender runs without a Cloudflare runtime: fall back instead of throwing
+    expect(code).toContain('if (import.meta.prerender) return undefined')
   })
 })
 

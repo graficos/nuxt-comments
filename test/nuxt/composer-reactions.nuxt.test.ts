@@ -30,6 +30,18 @@ describe('<CommentComposer>', () => {
     await wrapper.find('[data-test="custom"]').trigger('click')
     expect(wrapper.emitted('submit')).toEqual([['from slot']])
   })
+
+  it('prefills from initialBody and follows changes (edit mode)', async () => {
+    const wrapper = await mountSuspended(CommentComposer, {
+      props: { initialBody: 'original text' },
+    })
+    const value = () => (wrapper.find('textarea').element as HTMLTextAreaElement).value
+    expect(value()).toBe('original text')
+    await wrapper.setProps({ initialBody: 'updated text' })
+    expect(value()).toBe('updated text')
+    await wrapper.setProps({ initialBody: '' })
+    expect(value()).toBe('')
+  })
 })
 
 describe('<CommentReactions>', () => {

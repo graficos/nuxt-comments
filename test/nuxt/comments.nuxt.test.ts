@@ -274,4 +274,40 @@ describe('<Comments> (Nuxt environment)', () => {
     await btn.trigger('click')
     expect(signIn).toHaveBeenCalledWith('github')
   })
+
+  it('does not eagerly expand replies by default', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1' })] })
+    await mountSuspended(Comments, { props: { resource: 'blog/x' } })
+    await Promise.resolve()
+    expect(state.toggleReplies).not.toHaveBeenCalled()
+  })
+
+  it('eagerly loads and expands replies when expandReplies is set', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1' }), makeComment({ id: 'c2' })] })
+    await mountSuspended(Comments, { props: { resource: 'blog/x', expandReplies: true } })
+    await Promise.resolve()
+    await nextTick()
+    expect(state.toggleReplies).toHaveBeenCalledWith('c1')
+    expect(state.toggleReplies).toHaveBeenCalledWith('c2')
+  })
+
+  it('exposes replyingTo/editing/cancel on the composer slot', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    mockComposable({ comments: [makeComment({ id: 'c1', userId: 'u1' })] })
+    const wrapper = await mountSuspended(Comments, {
+      props: { resource: 'blog/x' },
+      slots: {
+        composer: `<template #composer="{ replyingTo, editing, cancel }"><button class="ctx" @click="cancel()">{{ replyingTo?.id ?? editing?.id ?? 'none' }}</button></template>`,
+      },
+    })
+    expect(wrapper.find('.ctx').text()).toBe('none')
+    await wrapper.find('button[aria-label="Reply to comment c1"]').trigger('click')
+    await nextTick()
+    expect(wrapper.find('.ctx').text()).toBe('c1')
+    await wrapper.find('.ctx').trigger('click')
+    await nextTick()
+    expect(wrapper.find('.ctx').text()).toBe('none')
+  })
 })

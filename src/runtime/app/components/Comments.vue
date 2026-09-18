@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, toRef } from 'vue'
+import { ref, computed, toRef, watch } from 'vue'
 import { useRuntimeConfig } from '#imports'
 import { useComments } from '../composables/useComments'
 import { useCommentsSession } from '../composables/useCommentsSession'
@@ -18,6 +18,11 @@ const props = defineProps<{
   limit?: number
   /** Auth providers offered by the consumer (provider names are consumer-owned). */
   providers?: string[]
+  /**
+   * Eagerly load and expand every loaded comment's reply thread instead of
+   * showing a "View replies" control. Defaults to false (lazy threads).
+   */
+  expandReplies?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -112,6 +117,28 @@ function startEdit(c: CommentType) {
   editing.value = c
   replyingTo.value = null
 }
+function cancelComposer() {
+  replyingTo.value = null
+  editing.value = null
+}
+
+// Eagerly expand reply threads when `expandReplies` is enabled. Runs for the
+// initial load and each paginated page; each comment is attempted once.
+const autoExpanded = new Set<string>()
+watch(comments, async (list) => {
+  if (!props.expandReplies) return
+  for (const c of list) {
+    if (autoExpanded.has(c.id)) continue
+    autoExpanded.add(c.id)
+    if (expanded.value[c.id]) continue
+    try {
+      await toggleReplies(c.id)
+    }
+    catch (err) {
+      fail(err)
+    }
+  }
+}, { immediate: true })
 async function onDelete(c: CommentType) {
   try {
     await deleteComment(c.id)
@@ -286,10 +313,14 @@ defineOptions({ name: 'Comments' })
       name="composer"
       :submit="onSubmit"
       :is-submitting="submitting"
+      :replying-to="replyingTo"
+      :editing="editing"
+      :cancel="cancelComposer"
     >
       <CommentComposer
         :is-submitting="submitting"
-        :placeholder="replyingTo ? `Reply to ${replyingTo.authorName ?? 'comment'}...` : 'Write a comment...'"
+        :initial-body="editing?.body ?? ''"
+        :placeholder="editing ? 'Edit your comment…' : replyingTo ? `Reply to ${replyingTo.authorName ?? 'comment'}…` : 'Write a comment…'"
         @submit="onSubmit"
       />
     </slot>

@@ -16,11 +16,12 @@ The main entry point.
 
 ### Props
 
-| Prop        | Type       | Required | Description                                                                  |
-| ----------- | ---------- | -------- | ---------------------------------------------------------------------------- |
-| `resource`  | `string`   | yes      | Opaque resource identifier. Normalized before requests.                      |
-| `limit`     | `number`   | no       | Initial page size for top-level comments. Defaults to `pagination.pageSize`. |
-| `providers` | `string[]` | no       | Provider names passed to the login UI. Consumer-owned.                       |
+| Prop            | Type        | Required | Description                                                                                   |
+| --------------- | ----------- | -------- | --------------------------------------------------------------------------------------------- |
+| `resource`      | `string`    | yes      | Opaque resource identifier. Normalized before requests.                                       |
+| `limit`         | `number`    | no       | Initial page size for top-level comments. Defaults to `pagination.pageSize`.                  |
+| `providers`     | `string[]`  | no       | Provider names passed to the login UI. Consumer-owned.                                        |
+| `expandReplies` | `boolean`   | no       | Eagerly load and expand every comment's reply thread instead of the "View replies" control.   |
 
 #### Providers config
 
@@ -39,7 +40,7 @@ Two separate layers:
 | `empty`     | —                          | Empty state.                                     |
 | `list`      | `{ comments }`             | Replace the whole list rendering.                |
 | `load-more` | `{ fetchMore }`            | Replace the pagination control.                  |
-| `composer`  | `{ submit, isSubmitting }` | Replace the composer.                            |
+| `composer`  | `{ submit, isSubmitting, replyingTo, editing, cancel }` | Replace the composer. `replyingTo`/`editing` are the active comment (or `null`); call `cancel()` to clear them. |
 | `login`     | `{ signIn, providers }`    | Replace the sign-in gate.                        |
 | `footer`    | `{ resource }`             | Appended after everything.                       |
 
@@ -123,11 +124,12 @@ A soft-deleted comment renders `[deleted]`; a comment whose author snapshot was 
 
 ## `<CommentComposer>`
 
-| Prop           | Type      | Description                            |
-| -------------- | --------- | -------------------------------------- |
-| `placeholder`  | `string`  | Textarea placeholder.                  |
-| `isSubmitting` | `boolean` | Disables the control while submitting. |
-| `submitLabel`  | `string`  | Submit button label.                   |
+| Prop           | Type      | Description                                             |
+| -------------- | --------- | ------------------------------------------------------- |
+| `placeholder`  | `string`  | Textarea placeholder.                                   |
+| `isSubmitting` | `boolean` | Disables the control while submitting.                  |
+| `submitLabel`  | `string`  | Submit button label.                                    |
+| `initialBody`  | `string`  | Initial textarea value (prefills when editing a comment). |
 
 Slot: `composer({ submit, isSubmitting, body })` — call `submit(value)` with custom state or `submit()` to use the built-in textarea. Event: `submit(body)`.
 

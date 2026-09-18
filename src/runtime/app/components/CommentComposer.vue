@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   /** Placeholder text for the textarea. */
@@ -8,13 +8,20 @@ const props = defineProps<{
   isSubmitting?: boolean
   /** Label for the submit button (consumer-controlled text). */
   submitLabel?: string
+  /** Initial textarea value. Used to prefill when editing an existing comment. */
+  initialBody?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'submit', body: string): void
 }>()
 
-const body = ref('')
+const body = ref(props.initialBody ?? '')
+
+// Prefill (or clear) when the composer is opened for editing a comment.
+watch(() => props.initialBody, (value) => {
+  body.value = value ?? ''
+})
 
 /**
  * Emit the comment body. Accepts an explicit value so custom `#composer`
