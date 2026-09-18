@@ -1,8 +1,9 @@
 {
-  "name": "nuxt-comments",
+  "name": "@graficos/nuxt-comments",
   "version": "0.0.0",
   "description": "Embeddable, unstyled comments system for Nuxt 4, backed by Cloudflare D1 and authenticated via @nuxtjs/better-auth.",
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -62,6 +63,7 @@
     "playground"
   ],
   "scripts": {
+    "build": "nuxt-module-build build",
     "prepack": "nuxt-module-build build",
     "prepublishOnly": "pnpm run lint && pnpm run test",
     "dev": "pnpm run dev:prepare && nuxt dev playground",
@@ -83,6 +85,7 @@
     "ulidx": "^2.4.1"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@cloudflare/vitest-plugin": "^1.0.0",
     "@cloudflare/workers-types": "^5.20260815.1",
     "@nuxt/eslint-config": "^1.17.0",
