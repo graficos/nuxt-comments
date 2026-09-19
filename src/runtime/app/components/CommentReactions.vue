@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { Comment } from '../../shared/types'
+import { useCommentsMessages } from '../composables/useCommentsMessages'
 
 const props = defineProps<{
   comment: Comment
   reactionTypes?: string[]
 }>()
+
+const { t } = useCommentsMessages()
 
 const emit = defineEmits<{
   (e: 'react', payload: { comment: Comment, type: string }): void
@@ -21,7 +24,7 @@ function toggle(type: string) {
 <template>
   <div
     role="group"
-    aria-label="Reactions"
+    :aria-label="t('reactions')"
     data-reactions
   >
     <template
@@ -41,7 +44,7 @@ function toggle(type: string) {
           :data-reaction-type="type"
           :data-active="props.comment.viewerReactions?.includes(type) ? 'true' : 'false'"
           :aria-pressed="props.comment.viewerReactions?.includes(type) ?? false"
-          :aria-label="`React with ${type}`"
+          :aria-label="t('reactWith', { type })"
           @click="toggle(type)"
         >
           {{ type }} {{ props.comment.reactionCounts?.[type] ?? 0 }}

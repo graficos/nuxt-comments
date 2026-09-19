@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useCommentsMessages } from '../composables/useCommentsMessages'
 
 const props = defineProps<{
   /** Placeholder text for the textarea. */
@@ -17,6 +18,8 @@ const emit = defineEmits<{
 }>()
 
 const body = ref(props.initialBody ?? '')
+
+const { t } = useCommentsMessages()
 
 // Prefill (or clear) when the composer is opened for editing a comment.
 watch(() => props.initialBody, (value) => {
@@ -37,7 +40,7 @@ function submit(value?: string) {
 
 <template>
   <form
-    aria-label="Comment composer"
+    :aria-label="t('composer')"
     data-comment-composer
     @submit.prevent="submit()"
   >
@@ -49,16 +52,16 @@ function submit(value?: string) {
     >
       <textarea
         v-model="body"
-        :placeholder="props.placeholder ?? 'Write a comment...'"
+        :placeholder="props.placeholder ?? t('writeComment')"
         :disabled="props.isSubmitting"
-        aria-label="Comment body"
+        :aria-label="t('commentBody')"
         rows="3"
       />
       <button
         type="submit"
         :disabled="props.isSubmitting || !body.trim()"
       >
-        {{ props.submitLabel ?? 'Post' }}
+        {{ props.submitLabel ?? t('post') }}
       </button>
     </slot>
   </form>

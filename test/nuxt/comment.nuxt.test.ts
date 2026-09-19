@@ -103,12 +103,19 @@ describe('<Comment> (Nuxt environment)', () => {
 
   it('shows the toggle button when the thread is not expanded', async () => {
     const wrapper = await mountSuspended(Comment, {
-      props: { comment: makeComment(), repliesByComment: {}, replyExpanded: {} },
+      props: { comment: makeComment({ replyCount: 1 }), repliesByComment: {}, replyExpanded: {} },
     })
     const toggle = wrapper.find('button[aria-label="Show replies to comment c1"]')
     expect(toggle.exists()).toBe(true)
     await toggle.trigger('click')
     expect(wrapper.emitted('toggle-replies')).toHaveLength(1)
+  })
+
+  it('hides the toggle button when the comment has no replies', async () => {
+    const wrapper = await mountSuspended(Comment, {
+      props: { comment: makeComment({ replyCount: 0 }), repliesByComment: {}, replyExpanded: {} },
+    })
+    expect(wrapper.find('button[aria-label="Show replies to comment c1"]').exists()).toBe(false)
   })
 
   it('offers a load-more-replies action', async () => {

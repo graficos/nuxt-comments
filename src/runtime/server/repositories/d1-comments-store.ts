@@ -26,6 +26,8 @@ interface CommentRow {
   updated_at: string
   deleted_at: string | null
   deleted_by: string | null
+  /** Present on list queries only (correlated COUNT subquery). */
+  reply_count?: number
 }
 
 interface ReactionRow {
@@ -65,6 +67,7 @@ function rowToComment(row: CommentRow): Comment {
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
     deletedBy: row.deleted_by as Comment['deletedBy'],
+    ...(row.reply_count !== undefined ? { replyCount: row.reply_count } : {}),
   }
 }
 
@@ -95,13 +98,15 @@ export class D1CommentsStore implements CommentsStore {
     const cursor = opts?.cursor
     const stmt = cursor
       ? this.db.prepare(
-          `SELECT * FROM comments WHERE resource = ? AND parent_id IS NULL
+          `SELECT *, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id) AS reply_count
+           FROM comments WHERE resource = ? AND parent_id IS NULL
            AND (created_at < ? OR (created_at = ? AND id < ?))
            ORDER BY created_at DESC, id DESC LIMIT ?`,
         )
           .bind(resource, cursor.createdAt, cursor.createdAt, cursor.id, limit + 1)
       : this.db.prepare(
-          `SELECT * FROM comments WHERE resource = ? AND parent_id IS NULL
+          `SELECT *, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id) AS reply_count
+           FROM comments WHERE resource = ? AND parent_id IS NULL
            ORDER BY created_at DESC, id DESC LIMIT ?`,
         ).bind(resource, limit + 1)
     const { results } = await stmt.all<CommentRow>()
@@ -113,13 +118,15 @@ export class D1CommentsStore implements CommentsStore {
     const cursor = opts?.cursor
     const stmt = cursor
       ? this.db.prepare(
-          `SELECT * FROM comments WHERE parent_id = ?
+          `SELECT *, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id) AS reply_count
+           FROM comments WHERE parent_id = ?
            AND (created_at < ? OR (created_at = ? AND id < ?))
            ORDER BY created_at DESC, id DESC LIMIT ?`,
         )
           .bind(commentId, cursor.createdAt, cursor.createdAt, cursor.id, limit + 1)
       : this.db.prepare(
-          `SELECT * FROM comments WHERE parent_id = ?
+          `SELECT *, (SELECT COUNT(*) FROM comments r WHERE r.parent_id = comments.id) AS reply_count
+           FROM comments WHERE parent_id = ?
            ORDER BY created_at DESC, id DESC LIMIT ?`,
         ).bind(commentId, limit + 1)
     const { results } = await stmt.all<CommentRow>()
@@ -159,6 +166,7 @@ export class D1CommentsStore implements CommentsStore {
       updatedAt: ts,
       deletedAt: null,
       deletedBy: null,
+      replyCount: 0,
     }
   }
 

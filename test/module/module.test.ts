@@ -96,6 +96,14 @@ describe('nuxt-comments module (installed in the playground app)', () => {
     const names = imports.map(i => i.name)
     expect(names).toContain('useComments')
     expect(names).toContain('useCommentsSession')
+    expect(names).toContain('useCommentsMessages')
+  })
+
+  it('exposes default messages in the public runtime config', () => {
+    const messages = nuxt.options.runtimeConfig.public?.comments?.messages
+    expect(messages?.comments).toBe('Comments')
+    expect(messages?.continueWith).toBe('Continue with {provider}')
+    expect(messages?.replyTo).toBe('Reply to {author}…')
   })
 
   it('auto-installs @nuxtjs/better-auth via moduleDependencies', () => {

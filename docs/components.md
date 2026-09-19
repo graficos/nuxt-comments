@@ -2,6 +2,8 @@
 
 All components are **unstyled**. They render semantic HTML with accessibility attributes and expose props, typed slots and events. The package ships no CSS, no Tailwind, no design system, and no provider logos.
 
+All built-in text (including `aria-label`s) is config-driven: override any string via [`comments.messages`](./configuration.md#messages-i18n). The package ships English defaults and no i18n runtime.
+
 With the default `components.prefix: 'Nuxt'` the components are `<NuxtComments>`, `<NuxtComment>`, `<NuxtCommentComposer>`, `<NuxtCommentReactions>`, `<NuxtCommentAuth>`. Set `components.prefix: ''` for `<Comments>`, etc. The unprefixed names are used below for brevity.
 
 ## `<Comments>`
@@ -121,6 +123,8 @@ Renders one comment and recursively renders its loaded replies.
 Events: `reply`, `edit`, `delete`, `react`, `unreact`, `toggle-replies`, `load-replies`.
 
 A soft-deleted comment renders `[deleted]`; a comment whose author snapshot was cleared renders `[deleted author]`.
+
+The thread toggle ("View replies") only renders when the comment actually has replies — driven by `comment.replyCount` (populated by the list endpoints) or an already-loaded thread.
 
 ## `<CommentComposer>`
 

@@ -31,6 +31,11 @@ export interface Comment {
   authorImage: string | null
   /** Replies (populated only when fetched). */
   replies?: Comment[]
+  /**
+   * Number of direct replies. Populated by the list endpoints so the UI can
+   * decide whether to offer a thread toggle; `undefined` on single-row reads.
+   */
+  replyCount?: number
   /** Reaction counts keyed by type (populated only when fetched). */
   reactionCounts?: Record<string, number>
   /** Current viewer's reaction types on this comment. */

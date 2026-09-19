@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Comment } from '../../shared/types'
+import { useCommentsMessages } from '../composables/useCommentsMessages'
 
 const props = defineProps<{
   comment: Comment
@@ -85,13 +86,22 @@ const replies = (): Comment[] | undefined => props.repliesByComment?.[props.comm
 const hasMore = (): boolean | undefined => props.replyHasMore?.[props.comment.id]
 const expanded = (): boolean | undefined => props.replyExpanded?.[props.comment.id]
 
+// Only offer the thread toggle when there is actually something to show:
+// `replyCount` comes from the API; the loaded-replies fallback covers a reply
+// that was just created locally (the parent's count may not have refreshed).
+const hasReplies = computed(() =>
+  (props.comment.replyCount ?? 0) > 0 || (replies()?.length ?? 0) > 0,
+)
+
+const { t } = useCommentsMessages()
+
 defineOptions({ name: 'Comment' })
 </script>
 
 <template>
   <article
     role="comment"
-    :aria-label="comment.authorName ? `Comment by ${comment.authorName}` : 'Comment by deleted author'"
+    :aria-label="comment.authorName ? t('commentBy', { author: comment.authorName }) : t('commentByDeletedAuthor')"
     :data-comment-id="comment.id"
   >
     <slot
@@ -103,7 +113,7 @@ defineOptions({ name: 'Comment' })
         :comment="comment"
       >
         <span :data-author-id="comment.userId">
-          {{ comment.authorName ?? '[deleted author]' }}
+          {{ comment.authorName ?? t('deletedAuthor') }}
         </span>
       </slot>
 
@@ -121,7 +131,7 @@ defineOptions({ name: 'Comment' })
           v-else
           :data-deleted="comment.deletedAt ? 'true' : 'false'"
         >
-          [deleted]
+          {{ t('deleted') }}
         </p>
       </slot>
 
@@ -136,26 +146,26 @@ defineOptions({ name: 'Comment' })
       >
         <button
           type="button"
-          :aria-label="`Reply to comment ${comment.id}`"
+          :aria-label="t('replyToComment', { id: comment.id })"
           @click="onReply"
         >
-          Reply
+          {{ t('reply') }}
         </button>
         <button
           v-if="canEditResolved"
           type="button"
-          :aria-label="`Edit comment ${comment.id}`"
+          :aria-label="t('editCommentAria', { id: comment.id })"
           @click="onEdit"
         >
-          Edit
+          {{ t('edit') }}
         </button>
         <button
           v-if="canEditResolved"
           type="button"
-          :aria-label="`Delete comment ${comment.id}`"
+          :aria-label="t('deleteCommentAria', { id: comment.id })"
           @click="onDelete"
         >
-          Delete
+          {{ t('delete') }}
         </button>
       </slot>
 
@@ -176,7 +186,7 @@ defineOptions({ name: 'Comment' })
             :data-reaction-type="type"
             :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
             :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
-            :aria-label="`React with ${type}`"
+            :aria-label="t('reactWith', { type })"
             @click="toggleReaction(type)"
           >
             {{ type }} {{ comment.reactionCounts?.[type] ?? 0 }}
@@ -195,12 +205,12 @@ defineOptions({ name: 'Comment' })
         :load-more="() => emit('load-replies', comment)"
       >
         <button
-          v-if="expanded() === undefined || !expanded()"
+          v-if="hasReplies && (expanded() === undefined || !expanded())"
           type="button"
-          :aria-label="`Show replies to comment ${comment.id}`"
+          :aria-label="t('showReplies', { id: comment.id })"
           @click="emit('toggle-replies', comment)"
         >
-          View replies
+          {{ t('viewReplies') }}
         </button>
         <template v-else>
           <ol data-replies-list>
@@ -267,7 +277,7 @@ defineOptions({ name: 'Comment' })
                 type="button"
                 @click="emit('load-replies', comment)"
               >
-                Load more replies
+                {{ t('loadMoreReplies') }}
               </button>
             </li>
           </ol>

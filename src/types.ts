@@ -1,3 +1,5 @@
+import type { CommentsMessages } from './runtime/shared/messages'
+
 export interface ModuleOptions {
   database?: {
     /** D1 binding name configured in the consumer's Wrangler file. @default 'DB' */
@@ -35,6 +37,12 @@ export interface ModuleOptions {
       binding?: string
     }
   }
+  /**
+   * Override any component string (including `aria-label`s) for i18n.
+   * Merged over the built-in English defaults. Dynamic parts use `{token}`
+   * placeholders, e.g. `replyTo: 'Antwort an {author}…'`.
+   */
+  messages?: Partial<CommentsMessages>
   /** Rate limiter strategy. 'memory' is single-isolate only. @default 'memory' */
   rateLimiter?: 'none' | 'memory'
   /**
@@ -56,6 +64,7 @@ export interface RuntimeConfigPublicComments {
   reactions: Required<NonNullable<NonNullable<ModuleOptions['reactions']>>>
   limits: Required<NonNullable<NonNullable<ModuleOptions['limits']>>>
   componentsPrefix: string
+  messages: CommentsMessages
 }
 
 declare module 'nuxt/schema' {

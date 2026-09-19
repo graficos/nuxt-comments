@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useCommentsSession } from '../composables/useCommentsSession'
+import { useCommentsMessages } from '../composables/useCommentsMessages'
 
 const props = defineProps<{
   /** Optional list of provider names to offer. Consumer-owned. */
@@ -7,6 +8,7 @@ const props = defineProps<{
 }>()
 
 const session = useCommentsSession()
+const { t } = useCommentsMessages()
 
 async function signIn(provider: string) {
   await session.signIn(provider)
@@ -16,7 +18,7 @@ async function signIn(provider: string) {
 <template>
   <div
     role="group"
-    aria-label="Sign in to comment"
+    :aria-label="t('signInToComment')"
     data-comment-auth
   >
     <slot
@@ -24,7 +26,7 @@ async function signIn(provider: string) {
       :sign-in="signIn"
       :providers="props.providers"
     >
-      <p>You need to be signed in to comment.</p>
+      <p>{{ t('signInPrompt') }}</p>
       <ul>
         <li
           v-for="provider in props.providers"
@@ -34,7 +36,7 @@ async function signIn(provider: string) {
             type="button"
             @click="signIn(provider)"
           >
-            Continue with {{ provider }}
+            {{ t('continueWith', { provider }) }}
           </button>
         </li>
       </ul>

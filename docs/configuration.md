@@ -20,6 +20,11 @@ export default defineNuxtConfig({
         binding: 'DB',
       },
     },
+    messages: {
+      // Override any component string; dynamic parts use `{token}`.
+      post: 'Send',
+      replyTo: 'Antwort an {author}…',
+    },
     pagination: {
       pageSize: 20,
       maxPageSize: 100,
@@ -45,6 +50,7 @@ export default defineNuxtConfig({
 |---|---|---|---|
 | `database.binding` | `string` | `'DB'` | Name of the D1 binding to read from `event.context.cloudflare.env`. Must match your Wrangler file. |
 | `auth.database.binding` | `string` | – | D1 binding holding Better Auth's tables. **Opt-in:** when set, Better Auth is backed by D1 (email/password, sessions, revocation). Omit to leave Better Auth on its in-memory default. See [authentication.md](./authentication.md#turnkey-d1-persistence-opt-in). |
+| `messages` | `Partial<CommentsMessages>` | English defaults | Override any built-in component string, including `aria-label`s. Merged over the defaults; dynamic parts use `{token}` placeholders (e.g. `continueWith: 'Continue with {provider}'`). See [Messages](#messages-i18n). |
 | `pagination.pageSize` | `number` | `20` | Default page size for list endpoints and the client composable. |
 | `pagination.maxPageSize` | `number` | `100` | Hard cap on `?limit=` values. Requests above this are clamped, never rejected. |
 | `reactions.enabled` | `boolean` | `true` | Turns the reaction endpoints and UI data on/off. |
@@ -54,6 +60,36 @@ export default defineNuxtConfig({
 | `components.prefix` | `string` | `'Nuxt'` | Component name prefix. Set to `''` for `<Comments>`, `<Comment>`, …. |
 | `rateLimiter` | `'none' \| 'memory'` | `'memory'` | Mutation rate limiting. `'memory'` is a per-isolate in-memory limiter (single-isolate only). |
 | `rateLimiterTrustProxy` | `boolean` | `false` | Trust `x-forwarded-for` for rate-limit identity. Enable only behind a trusted proxy; otherwise `cf-connecting-ip` is used. |
+
+### Messages (i18n)
+
+The package ships English defaults and **no i18n runtime**. Every built-in string — visible text and `aria-label`s — is overridable through `comments.messages`. Overrides are merged over the defaults, so you only provide the keys you want to change. The resolved object lands in `runtimeConfig.public.comments.messages`, and the `useCommentsMessages()` auto-import gives you the same `t(key, params)` accessor in custom UI.
+
+Messages with dynamic parts use `{token}` placeholders; pass values as the second argument. Unknown tokens are left untouched.
+
+```ts
+comments: {
+  messages: {
+    reply: 'Antworten',
+    replyTo: 'Antwort an {author}…',
+    continueWith: 'Weiter mit {provider}',
+    reactWith: 'Mit {type} reagieren',
+    replyToComment: 'Auf Kommentar {id} antworten',
+  },
+}
+```
+
+```vue
+<script setup lang="ts">
+const { t } = useCommentsMessages()
+</script>
+
+<template>
+  <button>{{ t('reply') }}</button>
+</template>
+```
+
+The `comments.messages` option is typed, so your editor autocompletes every key and flags typos.
 
 ### Component naming
 

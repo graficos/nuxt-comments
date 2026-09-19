@@ -3,6 +3,7 @@ import { ref, computed, toRef, watch } from 'vue'
 import { useRuntimeConfig } from '#imports'
 import { useComments } from '../composables/useComments'
 import { useCommentsSession } from '../composables/useCommentsSession'
+import { useCommentsMessages } from '../composables/useCommentsMessages'
 import Comment from './Comment.vue'
 import CommentComposer from './CommentComposer.vue'
 import CommentAuth from './CommentAuth.vue'
@@ -37,6 +38,7 @@ const emit = defineEmits<{
 
 const config = useRuntimeConfig()
 const reactionTypes = computed(() => config.public.comments?.reactions?.types ?? ['like'])
+const { t } = useCommentsMessages()
 
 const {
   comments,
@@ -130,6 +132,8 @@ watch(comments, async (list) => {
   for (const c of list) {
     if (autoExpanded.has(c.id)) continue
     autoExpanded.add(c.id)
+    // Nothing to expand for a comment with no replies.
+    if ((c.replyCount ?? 0) === 0) continue
     if (expanded.value[c.id]) continue
     try {
       await toggleReplies(c.id)
@@ -212,7 +216,7 @@ defineOptions({ name: 'Comments' })
 
 <template>
   <section
-    aria-label="Comments"
+    :aria-label="t('comments')"
     data-comments-root
     :data-resource="props.resource"
   >
@@ -221,7 +225,7 @@ defineOptions({ name: 'Comments' })
       :resource="props.resource"
       :count="comments.length"
     >
-      <h2>Comments</h2>
+      <h2>{{ t('comments') }}</h2>
     </slot>
 
     <slot
@@ -232,7 +236,7 @@ defineOptions({ name: 'Comments' })
         aria-busy="true"
         role="status"
       >
-        Loading comments…
+        {{ t('loading') }}
       </p>
     </slot>
 
@@ -242,7 +246,7 @@ defineOptions({ name: 'Comments' })
       :error="error"
     >
       <p role="alert">
-        Failed to load comments.
+        {{ t('loadFailed') }}
       </p>
     </slot>
 
@@ -250,7 +254,7 @@ defineOptions({ name: 'Comments' })
       v-else-if="comments.length === 0"
       name="empty"
     >
-      <p>No comments yet.</p>
+      <p>{{ t('empty') }}</p>
     </slot>
 
     <slot
@@ -304,7 +308,7 @@ defineOptions({ name: 'Comments' })
         :disabled="loading"
         @click="fetchMore"
       >
-        Load more
+        {{ t('loadMore') }}
       </button>
     </slot>
 
@@ -320,7 +324,7 @@ defineOptions({ name: 'Comments' })
       <CommentComposer
         :is-submitting="submitting"
         :initial-body="editing?.body ?? ''"
-        :placeholder="editing ? 'Edit your comment…' : replyingTo ? `Reply to ${replyingTo.authorName ?? 'comment'}…` : 'Write a comment…'"
+        :placeholder="editing ? t('editComment') : replyingTo ? t('replyTo', { author: replyingTo.authorName ?? t('deletedAuthor') }) : t('writeComment')"
         @submit="onSubmit"
       />
     </slot>

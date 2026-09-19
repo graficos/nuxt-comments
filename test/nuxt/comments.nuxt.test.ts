@@ -277,7 +277,7 @@ describe('<Comments> (Nuxt environment)', () => {
 
   it('does not eagerly expand replies by default', async () => {
     mockSession({ id: 'u1', name: 'Alice' })
-    const state = mockComposable({ comments: [makeComment({ id: 'c1' })] })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', replyCount: 1 })] })
     await mountSuspended(Comments, { props: { resource: 'blog/x' } })
     await Promise.resolve()
     expect(state.toggleReplies).not.toHaveBeenCalled()
@@ -285,12 +285,21 @@ describe('<Comments> (Nuxt environment)', () => {
 
   it('eagerly loads and expands replies when expandReplies is set', async () => {
     mockSession({ id: 'u1', name: 'Alice' })
-    const state = mockComposable({ comments: [makeComment({ id: 'c1' }), makeComment({ id: 'c2' })] })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', replyCount: 1 }), makeComment({ id: 'c2', replyCount: 2 })] })
     await mountSuspended(Comments, { props: { resource: 'blog/x', expandReplies: true } })
     await Promise.resolve()
     await nextTick()
     expect(state.toggleReplies).toHaveBeenCalledWith('c1')
     expect(state.toggleReplies).toHaveBeenCalledWith('c2')
+  })
+
+  it('does not eagerly expand comments without replies', async () => {
+    mockSession({ id: 'u1', name: 'Alice' })
+    const state = mockComposable({ comments: [makeComment({ id: 'c1', replyCount: 0 })] })
+    await mountSuspended(Comments, { props: { resource: 'blog/x', expandReplies: true } })
+    await Promise.resolve()
+    await nextTick()
+    expect(state.toggleReplies).not.toHaveBeenCalled()
   })
 
   it('exposes replyingTo/editing/cancel on the composer slot', async () => {

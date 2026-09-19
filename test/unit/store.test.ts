@@ -45,6 +45,17 @@ describe('D1CommentsStore', () => {
     expect(nested.items[0]!.id).toBe(r2.id)
   })
 
+  it('reports replyCount on listed comments', async () => {
+    const top = await store.createComment({ resource: '/blog/count', userId: 'u1', body: 'top' })
+    await store.createComment({ resource: '/blog/count', userId: 'u2', body: 'r1', parentId: top.id })
+    await store.createComment({ resource: '/blog/count', userId: 'u3', body: 'r2', parentId: top.id })
+    const page = await store.listTopLevel('/blog/count', { limit: 10 })
+    expect(page.items.find(c => c.id === top.id)!.replyCount).toBe(2)
+    const replies = await store.listReplies(top.id, { limit: 10 })
+    expect(replies.items).toHaveLength(2)
+    expect(replies.items.every(r => r.replyCount === 0)).toBe(true)
+  })
+
   it('updates a comment', async () => {
     const c = await store.createComment({ resource: '/blog/upd', userId: 'u1', body: 'orig' })
     const updated = await store.updateComment(c.id, 'edited')

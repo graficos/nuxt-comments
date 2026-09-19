@@ -3,6 +3,7 @@
 import { defu } from 'defu'
 import { defineNuxtModule, addComponent, addImports, addServerHandler, createResolver } from '@nuxt/kit'
 import type { ModuleOptions } from './types'
+import { defaultCommentsMessages } from './runtime/shared/messages'
 
 export type { ModuleOptions } from './types'
 
@@ -59,6 +60,7 @@ const defaults: ModuleOptions = {
   components: {
     prefix: 'Nuxt',
   },
+  messages: defaultCommentsMessages,
   rateLimiter: 'memory',
 }
 
@@ -116,6 +118,7 @@ export default defineNuxtModule<ModuleOptions>({
         reactions: { ...options.reactions, types: reactionTypes },
         limits: options.limits,
         componentsPrefix: componentPrefix,
+        messages: options.messages,
       },
     ) as NonNullable<typeof nuxt.options.runtimeConfig.public.comments>
 
@@ -138,6 +141,7 @@ export default defineNuxtModule<ModuleOptions>({
     addImports([
       { name: 'useComments', from: resolver.resolve('./runtime/app/composables/useComments') },
       { name: 'useCommentsSession', from: resolver.resolve('./runtime/app/composables/useCommentsSession') },
+      { name: 'useCommentsMessages', from: resolver.resolve('./runtime/app/composables/useCommentsMessages') },
     ])
 
     // Server API handlers.
