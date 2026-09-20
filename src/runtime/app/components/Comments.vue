@@ -60,6 +60,7 @@ const {
   unreact,
   appendReply,
   patchReaction,
+  patchDeleted,
 } = useComments(toRef(props, 'resource'), { limit: props.limit })
 
 const session = useCommentsSession()
@@ -146,6 +147,9 @@ watch(comments, async (list) => {
 async function onDelete(c: CommentType) {
   try {
     await deleteComment(c.id)
+    // Show the `[deleted]` tombstone immediately for replies too; `refresh`
+    // only reloads top-level comments.
+    patchDeleted(c.id)
     emit('delete', c)
     await refresh()
   }

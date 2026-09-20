@@ -74,6 +74,7 @@ function mockComposable(overrides?: {
     unreact: vi.fn().mockResolvedValue(undefined),
     appendReply: vi.fn(),
     patchReaction: vi.fn(),
+    patchDeleted: vi.fn(),
   }
   useCommentsMock.mockReturnValue(state)
   return state
@@ -149,6 +150,7 @@ describe('<Comments> (Nuxt environment)', () => {
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
     await wrapper.find('button[aria-label="Delete comment c1"]').trigger('click')
     expect(state.deleteComment).toHaveBeenCalledWith('c1')
+    expect(state.patchDeleted).toHaveBeenCalledWith('c1')
     expect(wrapper.emitted('delete')).toHaveLength(1)
   })
 

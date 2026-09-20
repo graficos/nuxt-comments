@@ -44,6 +44,8 @@ export interface UseCommentsReturn {
   appendReply: (comment: Comment) => void
   /** Patch a comment's reaction state locally, without reloading the list. */
   patchReaction: (commentId: string, type: string, active: boolean) => void
+  /** Mark a comment as soft-deleted locally (top-level or nested reply). */
+  patchDeleted: (commentId: string) => void
 }
 
 const API_BASE = '/api/_comments'
@@ -235,6 +237,25 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     repliesByComment.value = replies
   }
 
+  /**
+   * Mark a comment as soft-deleted locally so its `[deleted]` tombstone shows
+   * immediately. Author deletion keeps the row (threads survive), so the reply
+   * stays visible with its body cleared instead of vanishing.
+   */
+  function patchDeleted(commentId: string) {
+    const ts = new Date().toISOString()
+    function patch(c: Comment): Comment {
+      if (c.id !== commentId) return c
+      return { ...c, body: null, deletedAt: ts, deletedBy: 'author', reactionCounts: {}, viewerReactions: [] }
+    }
+    comments.value = comments.value.map(patch)
+    const replies: Record<string, Comment[]> = {}
+    for (const [id, list] of Object.entries(repliesByComment.value)) {
+      replies[id] = list.map(patch)
+    }
+    repliesByComment.value = replies
+  }
+
   return {
     comments,
     loading,
@@ -255,6 +276,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     unreact,
     appendReply,
     patchReaction,
+    patchDeleted,
   }
 }
 
