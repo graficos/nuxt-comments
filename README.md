@@ -14,7 +14,7 @@ An embeddable, **unstyled** comments system for **Nuxt 4**, backed by **Cloudfla
 - 🚫 Admin user deletion (`deleteCommentsUser`) with documented semantics
 - 💪🏽 Shared validation, consistent HTTP error envelope (thanks to Valibot)
 - ⏱️ Rate-limiter extension point (Cloudflare-native integration documented)
-- 🎨 Unstyled, accessible components with typed slots
+- 🎨 Unstyled, accessible components with typed slots and per-layer class props
 - 🌍 i18n-ready: override every string (including `aria-label`s) via `comments.messages` — no i18n dependency
 - 🔄 Adapter boundary for alternative persistence backends (potentially future feature)
 

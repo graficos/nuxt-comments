@@ -113,6 +113,22 @@ describe('<Comments> (Nuxt environment)', () => {
     expect(wrapper.text()).toContain('top-level body')
   })
 
+  it('applies classes and forwards commentClasses to comments', async () => {
+    const state = mockComposable({ comments: [makeComment({ id: 'c1' })] })
+    state.hasMore.value = true
+    const wrapper = await mountSuspended(Comments, {
+      props: {
+        resource: 'blog/x',
+        classes: { root: 'l-root', list: 'l-list', loadMoreButton: 'l-more' },
+        commentClasses: { root: 'c-root' },
+      },
+    })
+    expect(wrapper.find('section.l-root').exists()).toBe(true)
+    expect(wrapper.find('ol.l-list').exists()).toBe(true)
+    expect(wrapper.find('button.l-more').exists()).toBe(true)
+    expect(wrapper.find('article.c-root').exists()).toBe(true)
+  })
+
   it('renders nested replies when the thread is expanded', async () => {
     const state = mockComposable({ comments: [makeComment()] })
     const nested = makeComment({ id: 'r1', parentId: 'c1', body: 'nested reply' })

@@ -64,6 +64,47 @@ export interface Paginated<T> {
 
 export type DeletionPolicy = 'author' | 'user-deletion'
 
+/**
+ * Classes applied to the rendered layers and controls of a comment.
+ *
+ * The package is unstyled; these let a consumer target every wrapper and
+ * button without relying on structural selectors. All keys are optional.
+ */
+export interface CommentClasses {
+  /** Root `<article>`. */
+  root?: string
+  /** Row wrapping the action buttons and the reactions. */
+  footer?: string
+  /** Wrapper around the reply/edit/delete buttons. */
+  actions?: string
+  /** Wrapper around the reaction buttons. */
+  reactions?: string
+  /** Wrapper around the reply thread (toggle + list). */
+  replies?: string
+  /** Reply button. */
+  replyButton?: string
+  /** Edit button. */
+  editButton?: string
+  /** Delete button. */
+  deleteButton?: string
+  /** Each reaction button. */
+  reactionButton?: string
+  /** "View replies" toggle button. */
+  viewRepliesButton?: string
+  /** "Load more replies" button. */
+  loadMoreRepliesButton?: string
+}
+
+/** Classes applied to the layers of `<Comments>`. */
+export interface CommentsClasses {
+  /** Root `<section>`. */
+  root?: string
+  /** The top-level `<ol>`. */
+  list?: string
+  /** The "Load more" button. */
+  loadMoreButton?: string
+}
+
 /** Error envelope returned by the comments API (h3 shape, package code in `data`). */
 export interface CommentsError {
   statusCode: number

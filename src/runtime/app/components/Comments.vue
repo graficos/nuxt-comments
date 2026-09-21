@@ -7,7 +7,7 @@ import { useCommentsMessages } from '../composables/useCommentsMessages'
 import Comment from './Comment.vue'
 import CommentComposer from './CommentComposer.vue'
 import CommentAuth from './CommentAuth.vue'
-import type { Comment as CommentType } from '../../shared/types'
+import type { Comment as CommentType, CommentClasses, CommentsClasses } from '../../shared/types'
 
 /** Slots forwarded from <Comments> to each nested <Comment>. */
 const commentSlots = ['comment', 'comment-author', 'comment-body', 'comment-actions', 'reaction', 'reply'] as const
@@ -24,6 +24,10 @@ const props = defineProps<{
    * showing a "View replies" control. Defaults to false (lazy threads).
    */
   expandReplies?: boolean
+  /** Classes applied to this component's layers. */
+  classes?: CommentsClasses
+  /** Classes forwarded to every `<Comment>` (including nested replies). */
+  commentClasses?: CommentClasses
 }>()
 
 const emit = defineEmits<{
@@ -221,6 +225,7 @@ defineOptions({ name: 'Comments' })
 <template>
   <section
     :aria-label="t('comments')"
+    :class="classes?.root"
     data-comments-root
     :data-resource="props.resource"
   >
@@ -266,7 +271,10 @@ defineOptions({ name: 'Comments' })
       name="list"
       :comments="comments"
     >
-      <ol data-comments-list>
+      <ol
+        :class="classes?.list"
+        data-comments-list
+      >
         <li
           v-for="c in comments"
           :key="c.id"
@@ -278,6 +286,7 @@ defineOptions({ name: 'Comments' })
             :replies-by-comment="repliesByComment"
             :reply-has-more="replyHasMore"
             :reply-expanded="expanded"
+            :classes="props.commentClasses"
             @reply="startReply"
             @edit="startEdit"
             @delete="onDelete"
@@ -309,6 +318,7 @@ defineOptions({ name: 'Comments' })
     >
       <button
         type="button"
+        :class="classes?.loadMoreButton"
         :disabled="loading"
         @click="fetchMore"
       >

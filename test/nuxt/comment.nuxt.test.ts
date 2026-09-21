@@ -86,6 +86,38 @@ describe('<Comment> (Nuxt environment)', () => {
     expect(wrapper.emitted('react')).toEqual([[{ comment: expect.anything(), type: 'like' }]])
   })
 
+  it('applies layer and button classes from the classes prop', async () => {
+    const wrapper = await mountSuspended(Comment, {
+      props: {
+        comment: makeComment({ replyCount: 1 }),
+        reactionTypes: ['like'],
+        canEdit: true,
+        classes: {
+          root: 'c-root',
+          footer: 'c-footer',
+          actions: 'c-actions',
+          reactions: 'c-reactions',
+          replies: 'c-replies',
+          replyButton: 'c-reply',
+          editButton: 'c-edit',
+          deleteButton: 'c-delete',
+          reactionButton: 'c-react',
+          viewRepliesButton: 'c-view',
+        },
+      },
+    })
+    expect(wrapper.classes()).toContain('c-root')
+    expect(wrapper.find('[data-comment-footer].c-footer').exists()).toBe(true)
+    expect(wrapper.find('[data-comment-actions].c-actions').exists()).toBe(true)
+    expect(wrapper.find('[data-comment-reactions].c-reactions').exists()).toBe(true)
+    expect(wrapper.find('[data-comment-replies].c-replies').exists()).toBe(true)
+    expect(wrapper.find('button.c-reply').exists()).toBe(true)
+    expect(wrapper.find('button.c-edit').exists()).toBe(true)
+    expect(wrapper.find('button.c-delete').exists()).toBe(true)
+    expect(wrapper.find('button.c-react').exists()).toBe(true)
+    expect(wrapper.find('button.c-view').exists()).toBe(true)
+  })
+
   it('renders nested replies recursively (same component inside itself)', async () => {
     const nested = makeComment({ id: 'r1', parentId: 'c1', body: 'nested' })
     const wrapper = await mountSuspended(Comment, {

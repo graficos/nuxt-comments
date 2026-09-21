@@ -24,6 +24,8 @@ The main entry point.
 | `limit`         | `number`    | no       | Initial page size for top-level comments. Defaults to `pagination.pageSize`.                  |
 | `providers`     | `string[]`  | no       | Provider names passed to the login UI. Consumer-owned.                                        |
 | `expandReplies` | `boolean`   | no       | Eagerly load and expand every comment's reply thread instead of the "View replies" control.   |
+| `classes`       | `CommentsClasses` | no | Classes for this component's layers: `root` (`<section>`), `list` (top-level `<ol>`), `loadMoreButton`. |
+| `commentClasses` | `CommentClasses` | no | Classes forwarded to every `<Comment>`, including nested replies. See [`<Comment>` classes](#comment-classes). |
 
 #### Providers config
 
@@ -119,12 +121,42 @@ Renders one comment and recursively renders its loaded replies.
 | `repliesByComment` | `Record<string, Comment[]>` | Loaded replies keyed by comment id.                                                                                    |
 | `replyHasMore`     | `Record<string, boolean>`   | Whether more replies can be loaded.                                                                                    |
 | `replyExpanded`    | `Record<string, boolean>`   | Whether a thread is expanded.                                                                                          |
+| `classes`          | `CommentClasses`            | Classes applied to each layer and control. See [below](#comment-classes).                                              |
 
 Events: `reply`, `edit`, `delete`, `react`, `unreact`, `toggle-replies`, `load-replies`.
 
 A soft-deleted comment renders `[deleted]`; a comment whose author snapshot was cleared renders `[deleted author]`.
 
 The thread toggle ("View replies") only renders when the comment actually has replies — driven by `comment.replyCount` (populated by the list endpoints) or an already-loaded thread.
+
+#### Comment classes
+
+`classes` styles every layer without structural selectors. The action buttons and the reactions share one row (`footer`), so `display: flex` on it keeps them on the same line.
+
+| Key                   | Element                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `root`                | `<article role="comment">`                                |
+| `footer`              | `<div data-comment-footer>` — wraps actions + reactions   |
+| `actions`             | `<div data-comment-actions>` — reply/edit/delete          |
+| `reactions`           | `<div data-comment-reactions>`                            |
+| `replies`             | `<div data-comment-replies>` — thread toggle + list       |
+| `replyButton`         | Reply `<button>`                                          |
+| `editButton`          | Edit `<button>`                                           |
+| `deleteButton`        | Delete `<button>`                                         |
+| `reactionButton`      | Each reaction `<button>`                                  |
+| `viewRepliesButton`   | "View replies" `<button>`                                 |
+| `loadMoreRepliesButton` | "Load more replies" `<button>`                          |
+
+```vue
+<Comments
+  resource="/blog/my-post"
+  :comment-classes="{
+    footer: 'flex items-center gap-2',
+    replyButton: 'text-sm',
+    reactionButton: 'rounded-full',
+  }"
+/>
+```
 
 ## `<CommentComposer>`
 

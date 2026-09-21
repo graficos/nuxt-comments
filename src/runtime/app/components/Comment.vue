@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Comment } from '../../shared/types'
+import type { Comment, CommentClasses } from '../../shared/types'
 import { useCommentsMessages } from '../composables/useCommentsMessages'
 
 const props = defineProps<{
@@ -17,6 +17,8 @@ const props = defineProps<{
   replyHasMore?: Record<string, boolean>
   /** Whether a reply thread is expanded, per comment id. */
   replyExpanded?: Record<string, boolean>
+  /** Classes applied to each rendered layer and control. */
+  classes?: CommentClasses
 }>()
 
 /** Ownership of *this* comment — never inherited from a parent comment. */
@@ -101,6 +103,7 @@ defineOptions({ name: 'Comment' })
 <template>
   <article
     role="comment"
+    :class="classes?.root"
     :aria-label="comment.authorName ? t('commentBy', { author: comment.authorName }) : t('commentByDeletedAuthor')"
     :data-comment-id="comment.id"
   >
@@ -135,154 +138,185 @@ defineOptions({ name: 'Comment' })
         </p>
       </slot>
 
-      <slot
-        name="comment-actions"
-        :comment="comment"
-        :can-edit="canEditResolved"
-        :can-delete="canEditResolved"
-        :on-reply="onReply"
-        :on-edit="onEdit"
-        :on-delete="onDelete"
-      >
-        <button
-          type="button"
-          :aria-label="t('replyToComment', { id: comment.id })"
-          @click="onReply"
-        >
-          {{ t('reply') }}
-        </button>
-        <button
-          v-if="canEditResolved"
-          type="button"
-          :aria-label="t('editCommentAria', { id: comment.id })"
-          @click="onEdit"
-        >
-          {{ t('edit') }}
-        </button>
-        <button
-          v-if="canEditResolved"
-          type="button"
-          :aria-label="t('deleteCommentAria', { id: comment.id })"
-          @click="onDelete"
-        >
-          {{ t('delete') }}
-        </button>
-      </slot>
-
-      <template
-        v-for="type in reactionTypes"
-        :key="type"
+      <!-- Action row: reply/edit/delete and reactions share one wrapper so a
+           consumer can lay them out together (e.g. `display: flex`). -->
+      <div
+        :class="classes?.footer"
+        data-comment-footer
       >
         <slot
-          name="reaction"
+          name="comment-actions"
           :comment="comment"
-          :type="type"
-          :count="comment.reactionCounts?.[type] ?? 0"
-          :active="comment.viewerReactions?.includes(type) ?? false"
-          :toggle="() => toggleReaction(type)"
+          :can-edit="canEditResolved"
+          :can-delete="canEditResolved"
+          :on-reply="onReply"
+          :on-edit="onEdit"
+          :on-delete="onDelete"
         >
-          <button
-            type="button"
-            :data-reaction-type="type"
-            :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
-            :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
-            :aria-label="t('reactWith', { type })"
-            @click="toggleReaction(type)"
+          <div
+            :class="classes?.actions"
+            data-comment-actions
           >
-            {{ type }} {{ comment.reactionCounts?.[type] ?? 0 }}
-          </button>
-        </slot>
-      </template>
-
-      <!-- Reply thread: recursively renders <Comment> for each loaded reply. -->
-      <slot
-        name="reply"
-        :comment="comment"
-        :replies="replies()"
-        :expanded="expanded()"
-        :has-more="hasMore()"
-        :toggle="() => emit('toggle-replies', comment)"
-        :load-more="() => emit('load-replies', comment)"
-      >
-        <button
-          v-if="hasReplies && (expanded() === undefined || !expanded())"
-          type="button"
-          :aria-label="t('showReplies', { id: comment.id })"
-          @click="emit('toggle-replies', comment)"
-        >
-          {{ t('viewReplies') }}
-        </button>
-        <template v-else>
-          <ol data-replies-list>
-            <li
-              v-for="replyItem in replies()"
-              :key="replyItem.id"
+            <button
+              type="button"
+              :class="classes?.replyButton"
+              :aria-label="t('replyToComment', { id: comment.id })"
+              @click="onReply"
             >
-              <Comment
-                :comment="replyItem"
-                :viewer-user-id="viewerUserId"
-                :replies-by-comment="repliesByComment"
-                :reply-has-more="replyHasMore"
-                :reply-expanded="replyExpanded"
-                :reaction-types="reactionTypes"
-                @reply="$emit('reply', $event)"
-                @edit="$emit('edit', $event)"
-                @delete="$emit('delete', $event)"
-                @react="$emit('react', $event)"
-                @unreact="$emit('unreact', $event)"
-                @toggle-replies="$emit('toggle-replies', $event)"
-                @load-replies="$emit('load-replies', $event)"
-              >
-                <!-- Forward custom per-comment slots to nested replies. -->
-                <template #comment="{ comment: replyComment }">
-                  <slot
-                    name="comment"
-                    :comment="replyComment"
-                  />
-                </template>
-                <template #comment-author="{ comment: replyComment }">
-                  <slot
-                    name="comment-author"
-                    :comment="replyComment"
-                  />
-                </template>
-                <template #comment-body="{ comment: replyComment }">
-                  <slot
-                    name="comment-body"
-                    :comment="replyComment"
-                  />
-                </template>
-                <template #comment-actions="actionProps">
-                  <slot
-                    name="comment-actions"
-                    v-bind="actionProps"
-                  />
-                </template>
-                <template #reaction="reactionProps">
-                  <slot
-                    name="reaction"
-                    v-bind="reactionProps"
-                  />
-                </template>
-                <template #reply="replyProps">
-                  <slot
-                    name="reply"
-                    v-bind="replyProps"
-                  />
-                </template>
-              </Comment>
-            </li>
-            <li v-if="hasMore()">
+              {{ t('reply') }}
+            </button>
+            <button
+              v-if="canEditResolved"
+              type="button"
+              :class="classes?.editButton"
+              :aria-label="t('editCommentAria', { id: comment.id })"
+              @click="onEdit"
+            >
+              {{ t('edit') }}
+            </button>
+            <button
+              v-if="canEditResolved"
+              type="button"
+              :class="classes?.deleteButton"
+              :aria-label="t('deleteCommentAria', { id: comment.id })"
+              @click="onDelete"
+            >
+              {{ t('delete') }}
+            </button>
+          </div>
+        </slot>
+
+        <div
+          v-if="reactionTypes?.length"
+          :class="classes?.reactions"
+          data-comment-reactions
+        >
+          <template
+            v-for="type in reactionTypes"
+            :key="type"
+          >
+            <slot
+              name="reaction"
+              :comment="comment"
+              :type="type"
+              :count="comment.reactionCounts?.[type] ?? 0"
+              :active="comment.viewerReactions?.includes(type) ?? false"
+              :toggle="() => toggleReaction(type)"
+            >
               <button
                 type="button"
-                @click="emit('load-replies', comment)"
+                :class="classes?.reactionButton"
+                :data-reaction-type="type"
+                :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
+                :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
+                :aria-label="t('reactWith', { type })"
+                @click="toggleReaction(type)"
               >
-                {{ t('loadMoreReplies') }}
+                {{ type }} {{ comment.reactionCounts?.[type] ?? 0 }}
               </button>
-            </li>
-          </ol>
-        </template>
-      </slot>
+            </slot>
+          </template>
+        </div>
+      </div>
+
+      <!-- Reply thread: recursively renders <Comment> for each loaded reply. -->
+      <div
+        v-if="hasReplies"
+        :class="classes?.replies"
+        data-comment-replies
+      >
+        <slot
+          name="reply"
+          :comment="comment"
+          :replies="replies()"
+          :expanded="expanded()"
+          :has-more="hasMore()"
+          :toggle="() => emit('toggle-replies', comment)"
+          :load-more="() => emit('load-replies', comment)"
+        >
+          <button
+            v-if="!expanded()"
+            type="button"
+            :class="classes?.viewRepliesButton"
+            :aria-label="t('showReplies', { id: comment.id })"
+            @click="emit('toggle-replies', comment)"
+          >
+            {{ t('viewReplies') }}
+          </button>
+          <template v-else>
+            <ol data-replies-list>
+              <li
+                v-for="replyItem in replies()"
+                :key="replyItem.id"
+              >
+                <Comment
+                  :comment="replyItem"
+                  :viewer-user-id="viewerUserId"
+                  :replies-by-comment="repliesByComment"
+                  :reply-has-more="replyHasMore"
+                  :reply-expanded="replyExpanded"
+                  :reaction-types="reactionTypes"
+                  :classes="classes"
+                  @reply="$emit('reply', $event)"
+                  @edit="$emit('edit', $event)"
+                  @delete="$emit('delete', $event)"
+                  @react="$emit('react', $event)"
+                  @unreact="$emit('unreact', $event)"
+                  @toggle-replies="$emit('toggle-replies', $event)"
+                  @load-replies="$emit('load-replies', $event)"
+                >
+                  <!-- Forward custom per-comment slots to nested replies. -->
+                  <template #comment="{ comment: replyComment }">
+                    <slot
+                      name="comment"
+                      :comment="replyComment"
+                    />
+                  </template>
+                  <template #comment-author="{ comment: replyComment }">
+                    <slot
+                      name="comment-author"
+                      :comment="replyComment"
+                    />
+                  </template>
+                  <template #comment-body="{ comment: replyComment }">
+                    <slot
+                      name="comment-body"
+                      :comment="replyComment"
+                    />
+                  </template>
+                  <template #comment-actions="actionProps">
+                    <slot
+                      name="comment-actions"
+                      v-bind="actionProps"
+                    />
+                  </template>
+                  <template #reaction="reactionProps">
+                    <slot
+                      name="reaction"
+                      v-bind="reactionProps"
+                    />
+                  </template>
+                  <template #reply="replyProps">
+                    <slot
+                      name="reply"
+                      v-bind="replyProps"
+                    />
+                  </template>
+                </Comment>
+              </li>
+              <li v-if="hasMore()">
+                <button
+                  type="button"
+                  :class="classes?.loadMoreRepliesButton"
+                  @click="emit('load-replies', comment)"
+                >
+                  {{ t('loadMoreReplies') }}
+                </button>
+              </li>
+            </ol>
+          </template>
+        </slot>
+      </div>
     </slot>
   </article>
 </template>
