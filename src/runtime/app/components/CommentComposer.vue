@@ -41,7 +41,7 @@ function submit(value?: string) {
 <template>
   <form
     :aria-label="t('composer')"
-    data-comment-composer
+    data-nc-comment-composer
     @submit.prevent="submit()"
   >
     <slot

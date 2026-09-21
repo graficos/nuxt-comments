@@ -25,7 +25,7 @@ function toggle(type: string) {
   <div
     role="group"
     :aria-label="t('reactions')"
-    data-reactions
+    data-nc-reactions
   >
     <template
       v-for="type in props.reactionTypes"
@@ -41,8 +41,8 @@ function toggle(type: string) {
       >
         <button
           type="button"
-          :data-reaction-type="type"
-          :data-active="props.comment.viewerReactions?.includes(type) ? 'true' : 'false'"
+          :data-nc-reaction-type="type"
+          :data-nc-active="props.comment.viewerReactions?.includes(type) ? 'true' : 'false'"
           :aria-pressed="props.comment.viewerReactions?.includes(type) ?? false"
           :aria-label="t('reactWith', { type })"
           @click="toggle(type)"

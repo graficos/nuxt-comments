@@ -78,7 +78,7 @@ describe('<Comment> (Nuxt environment)', () => {
     const wrapper = await mountSuspended(Comment, {
       props: { comment: makeComment(), reactionTypes: ['like'] },
     })
-    const btn = wrapper.find('[data-reaction-type="like"]')
+    const btn = wrapper.find('[data-nc-reaction-type="like"]')
     expect(btn.exists()).toBe(true)
     expect(btn.text()).toContain('2')
     expect(btn.attributes('aria-pressed')).toBe('false')
@@ -107,10 +107,10 @@ describe('<Comment> (Nuxt environment)', () => {
       },
     })
     expect(wrapper.classes()).toContain('c-root')
-    expect(wrapper.find('[data-comment-footer].c-footer').exists()).toBe(true)
-    expect(wrapper.find('[data-comment-actions].c-actions').exists()).toBe(true)
-    expect(wrapper.find('[data-comment-reactions].c-reactions').exists()).toBe(true)
-    expect(wrapper.find('[data-comment-replies].c-replies').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comment-footer].c-footer').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comment-actions].c-actions').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comment-reactions].c-reactions').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comment-replies].c-replies').exists()).toBe(true)
     expect(wrapper.find('button.c-reply').exists()).toBe(true)
     expect(wrapper.find('button.c-edit').exists()).toBe(true)
     expect(wrapper.find('button.c-delete').exists()).toBe(true)
@@ -133,7 +133,7 @@ describe('<Comment> (Nuxt environment)', () => {
         },
       },
     })
-    expect(wrapper.find('[data-comment-replies].c-replies').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comment-replies].c-replies').exists()).toBe(true)
     expect(wrapper.find('ol.c-list').exists()).toBe(true)
     // one reply <li> plus the load-more <li>
     expect(wrapper.findAll('li.c-item')).toHaveLength(2)
@@ -149,7 +149,7 @@ describe('<Comment> (Nuxt environment)', () => {
         replyExpanded: { c1: true },
       },
     })
-    expect(wrapper.find('[data-replies-list]').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-replies-list]').exists()).toBe(true)
     expect(wrapper.text()).toContain('nested')
     // the recursive instance renders with its own article element
     expect(wrapper.findAll('article')).toHaveLength(2)

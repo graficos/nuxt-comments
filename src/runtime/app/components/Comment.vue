@@ -105,7 +105,7 @@ defineOptions({ name: 'Comment' })
     role="comment"
     :class="classes?.root"
     :aria-label="comment.authorName ? t('commentBy', { author: comment.authorName }) : t('commentByDeletedAuthor')"
-    :data-comment-id="comment.id"
+    :data-nc-comment-id="comment.id"
   >
     <slot
       name="comment"
@@ -115,7 +115,7 @@ defineOptions({ name: 'Comment' })
         name="comment-author"
         :comment="comment"
       >
-        <span :data-author-id="comment.userId">
+        <span :data-nc-author-id="comment.userId">
           {{ comment.authorName ?? t('deletedAuthor') }}
         </span>
       </slot>
@@ -132,7 +132,7 @@ defineOptions({ name: 'Comment' })
         </p>
         <p
           v-else
-          :data-deleted="comment.deletedAt ? 'true' : 'false'"
+          :data-nc-deleted="comment.deletedAt ? 'true' : 'false'"
         >
           {{ t('deleted') }}
         </p>
@@ -142,7 +142,7 @@ defineOptions({ name: 'Comment' })
            consumer can lay them out together (e.g. `display: flex`). -->
       <div
         :class="classes?.footer"
-        data-comment-footer
+        data-nc-comment-footer
       >
         <slot
           name="comment-actions"
@@ -155,7 +155,7 @@ defineOptions({ name: 'Comment' })
         >
           <div
             :class="classes?.actions"
-            data-comment-actions
+            data-nc-comment-actions
           >
             <button
               type="button"
@@ -189,7 +189,7 @@ defineOptions({ name: 'Comment' })
         <div
           v-if="reactionTypes?.length"
           :class="classes?.reactions"
-          data-comment-reactions
+          data-nc-comment-reactions
         >
           <template
             v-for="type in reactionTypes"
@@ -206,8 +206,8 @@ defineOptions({ name: 'Comment' })
               <button
                 type="button"
                 :class="classes?.reactionButton"
-                :data-reaction-type="type"
-                :data-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
+                :data-nc-reaction-type="type"
+                :data-nc-active="comment.viewerReactions?.includes(type) ? 'true' : 'false'"
                 :aria-pressed="comment.viewerReactions?.includes(type) ?? false"
                 :aria-label="t('reactWith', { type })"
                 @click="toggleReaction(type)"
@@ -223,7 +223,7 @@ defineOptions({ name: 'Comment' })
       <div
         v-if="hasReplies"
         :class="classes?.replies"
-        data-comment-replies
+        data-nc-comment-replies
       >
         <slot
           name="reply"
@@ -246,7 +246,7 @@ defineOptions({ name: 'Comment' })
           <template v-else>
             <ol
               :class="classes?.repliesList"
-              data-replies-list
+              data-nc-replies-list
             >
               <li
                 v-for="replyItem in replies()"

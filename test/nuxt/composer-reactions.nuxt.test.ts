@@ -67,24 +67,24 @@ describe('<CommentReactions>', () => {
     const wrapper = await mountSuspended(CommentReactions, {
       props: { comment: comment(), reactionTypes: ['like', 'heart'] },
     })
-    expect(wrapper.find('[data-reaction-type="like"]').text()).toContain('3')
-    expect(wrapper.find('[data-reaction-type="heart"]').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-reaction-type="like"]').text()).toContain('3')
+    expect(wrapper.find('[data-nc-reaction-type="heart"]').exists()).toBe(true)
   })
 
   it('marks the viewer\'s active reaction (aria-pressed)', async () => {
     const wrapper = await mountSuspended(CommentReactions, {
       props: { comment: comment(), reactionTypes: ['like', 'heart'] },
     })
-    expect(wrapper.find('[data-reaction-type="like"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('[data-reaction-type="heart"]').attributes('aria-pressed')).toBe('false')
+    expect(wrapper.find('[data-nc-reaction-type="like"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-nc-reaction-type="heart"]').attributes('aria-pressed')).toBe('false')
   })
 
   it('emits unreact for active and react for inactive types', async () => {
     const wrapper = await mountSuspended(CommentReactions, {
       props: { comment: comment(), reactionTypes: ['like', 'heart'] },
     })
-    await wrapper.find('[data-reaction-type="like"]').trigger('click')
-    await wrapper.find('[data-reaction-type="heart"]').trigger('click')
+    await wrapper.find('[data-nc-reaction-type="like"]').trigger('click')
+    await wrapper.find('[data-nc-reaction-type="heart"]').trigger('click')
     expect(wrapper.emitted('unreact')).toHaveLength(1)
     expect(wrapper.emitted('react')).toHaveLength(1)
   })

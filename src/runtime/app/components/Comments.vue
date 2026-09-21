@@ -226,8 +226,8 @@ defineOptions({ name: 'Comments' })
   <section
     :aria-label="t('comments')"
     :class="classes?.root"
-    data-comments-root
-    :data-resource="props.resource"
+    data-nc-comments-root
+    :data-nc-resource="props.resource"
   >
     <slot
       name="header"
@@ -273,7 +273,7 @@ defineOptions({ name: 'Comments' })
     >
       <ol
         :class="classes?.list"
-        data-comments-list
+        data-nc-comments-list
       >
         <li
           v-for="c in comments"

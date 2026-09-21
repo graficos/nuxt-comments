@@ -109,7 +109,7 @@ describe('<Comments> (Nuxt environment)', () => {
   it('renders comments', async () => {
     mockComposable({ comments: [makeComment({ body: 'top-level body' })] })
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
-    expect(wrapper.find('[data-comments-list]').exists()).toBe(true)
+    expect(wrapper.find('[data-nc-comments-list]').exists()).toBe(true)
     expect(wrapper.text()).toContain('top-level body')
   })
 
@@ -192,7 +192,7 @@ describe('<Comments> (Nuxt environment)', () => {
     mockSession({ id: 'u1', name: 'Alice' })
     const state = mockComposable({ comments: [makeComment({ userId: 'u2' })] })
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
-    await wrapper.find('[data-reaction-type="like"]').trigger('click')
+    await wrapper.find('[data-nc-reaction-type="like"]').trigger('click')
     await Promise.resolve()
     await nextTick()
     expect(state.react).toHaveBeenCalledWith('c1', 'like')
@@ -250,7 +250,7 @@ describe('<Comments> (Nuxt environment)', () => {
     mockSession({ id: 'u1', name: 'Alice' })
     const state = mockComposable({ comments: [makeComment({ userId: 'u2' })] })
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
-    await wrapper.find('[data-reaction-type="like"]').trigger('click')
+    await wrapper.find('[data-nc-reaction-type="like"]').trigger('click')
     expect(state.patchReaction).toHaveBeenCalledWith('c1', 'like', true)
     expect(state.refresh).not.toHaveBeenCalled()
   })
@@ -262,7 +262,7 @@ describe('<Comments> (Nuxt environment)', () => {
     state.expanded.value = { c1: true }
     const wrapper = await mountSuspended(Comments, { props: { resource: 'blog/x' } })
     const nested = wrapper.findAll('article')[1]!
-    await nested.find('[data-reaction-type="like"]').trigger('click')
+    await nested.find('[data-nc-reaction-type="like"]').trigger('click')
     expect(state.patchReaction).toHaveBeenCalledWith('r1', 'like', true)
   })
 

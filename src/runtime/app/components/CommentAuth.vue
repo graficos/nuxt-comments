@@ -19,7 +19,7 @@ async function signIn(provider: string) {
   <div
     role="group"
     :aria-label="t('signInToComment')"
-    data-comment-auth
+    data-nc-comment-auth
   >
     <slot
       name="login"

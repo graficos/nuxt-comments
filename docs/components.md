@@ -136,11 +136,11 @@ The thread toggle ("View replies") only renders when the comment actually has re
 | Key                   | Element                                                   |
 | --------------------- | --------------------------------------------------------- |
 | `root`                | `<article role="comment">`                                |
-| `footer`              | `<div data-comment-footer>` — wraps actions + reactions   |
-| `actions`             | `<div data-comment-actions>` — reply/edit/delete          |
-| `reactions`           | `<div data-comment-reactions>`                            |
-| `replies`             | `<div data-comment-replies>` — thread toggle + list       |
-| `repliesList`         | `<ol data-replies-list>` — the reply list (e.g. border)   |
+| `footer`              | `<div data-nc-comment-footer>` — wraps actions + reactions   |
+| `actions`             | `<div data-nc-comment-actions>` — reply/edit/delete          |
+| `reactions`           | `<div data-nc-comment-reactions>`                            |
+| `replies`             | `<div data-nc-comment-replies>` — thread toggle + list       |
+| `repliesList`         | `<ol data-nc-replies-list>` — the reply list (e.g. border)   |
 | `replyItem`           | Each `<li>` in the reply list, including the load-more item |
 | `replyButton`         | Reply `<button>`                                          |
 | `editButton`          | Edit `<button>`                                           |
@@ -261,6 +261,6 @@ import type { ModuleOptions } from "@graficos/nuxt-comments";
 ## Styling strategy
 
 - No CSS is shipped. There is no stylesheet to import.
-- Components emit semantic elements (`<section>`, `<article>`, `<ol>`, `<button>`, `<textarea>`) and a few stable `data-*` hooks: `data-comments-root`, `data-comments-list`, `data-replies-list`, `data-comment-id`, `data-reaction-type`, `data-active`, `data-comment-composer`.
+- Components emit semantic elements (`<section>`, `<article>`, `<ol>`, `<button>`, `<textarea>`) and a few stable `data-nc-*` hooks: `data-nc-comments-root`, `data-nc-comments-list`, `data-nc-replies-list`, `data-nc-comment-id`, `data-nc-reaction-type`, `data-nc-active`, `data-nc-comment-composer`.
 - Accessibility is built in: `role="comment"`, `aria-label` on comments and actions, `aria-pressed` on reactions, `aria-busy`/`role="status"` for loading, `role="alert"` for errors.
 - Style globally, with scoped styles on your slots, or both.
