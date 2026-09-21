@@ -1,5 +1,30 @@
 # @graficos/nuxt-comments
 
+## 0.3.0
+
+### Minor Changes
+
+- 66508d9: Expose per-layer and per-button CSS classes on `<Comments>` and `<Comment>`.
+  
+  The reply/edit/delete buttons and the reactions now share one row
+  (`data-comment-footer`), so they can be laid out together (e.g. `display: flex`).
+  
+  - `<Comment :classes>` accepts a `CommentClasses` object: `root`, `footer`,
+    `actions`, `reactions`, `replies`, `replyButton`, `editButton`, `deleteButton`,
+    `reactionButton`, `viewRepliesButton`, `loadMoreRepliesButton`.
+  - `<Comments :comment-classes>` forwards a `CommentClasses` object to every
+    comment (including nested replies).
+  - `<Comments :classes>` accepts a `CommentsClasses` object: `root`, `list`,
+    `loadMoreButton`.
+
+### Patch Changes
+
+- fe53a57: Show the `[deleted]` tombstone immediately after deleting a reply.
+  
+  `useComments` gains `patchDeleted(commentId)` and `<Comments>` calls it after a
+  successful delete. Previously only top-level comments were refreshed, so a
+  deleted reply kept rendering its old body until a full reload.
+
 ## 0.2.0
 
 ### Minor Changes
