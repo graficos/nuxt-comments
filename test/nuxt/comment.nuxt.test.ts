@@ -118,6 +118,28 @@ describe('<Comment> (Nuxt environment)', () => {
     expect(wrapper.find('button.c-view').exists()).toBe(true)
   })
 
+  it('applies replies-list classes when the thread is expanded', async () => {
+    const wrapper = await mountSuspended(Comment, {
+      props: {
+        comment: makeComment({ replyCount: 1 }),
+        repliesByComment: { c1: [makeComment({ id: 'r1', parentId: 'c1' })] },
+        replyExpanded: { c1: true },
+        replyHasMore: { c1: true },
+        classes: {
+          replies: 'c-replies',
+          repliesList: 'c-list',
+          replyItem: 'c-item',
+          loadMoreRepliesButton: 'c-more',
+        },
+      },
+    })
+    expect(wrapper.find('[data-comment-replies].c-replies').exists()).toBe(true)
+    expect(wrapper.find('ol.c-list').exists()).toBe(true)
+    // one reply <li> plus the load-more <li>
+    expect(wrapper.findAll('li.c-item')).toHaveLength(2)
+    expect(wrapper.find('button.c-more').exists()).toBe(true)
+  })
+
   it('renders nested replies recursively (same component inside itself)', async () => {
     const nested = makeComment({ id: 'r1', parentId: 'c1', body: 'nested' })
     const wrapper = await mountSuspended(Comment, {

@@ -81,6 +81,10 @@ export interface CommentClasses {
   reactions?: string
   /** Wrapper around the reply thread (toggle + list). */
   replies?: string
+  /** The replies `<ol>` (`data-replies-list`). */
+  repliesList?: string
+  /** Each `<li>` in the replies list (including the load-more item). */
+  replyItem?: string
   /** Reply button. */
   replyButton?: string
   /** Edit button. */

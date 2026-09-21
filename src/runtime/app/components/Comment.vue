@@ -244,10 +244,14 @@ defineOptions({ name: 'Comment' })
             {{ t('viewReplies') }}
           </button>
           <template v-else>
-            <ol data-replies-list>
+            <ol
+              :class="classes?.repliesList"
+              data-replies-list
+            >
               <li
                 v-for="replyItem in replies()"
                 :key="replyItem.id"
+                :class="classes?.replyItem"
               >
                 <Comment
                   :comment="replyItem"
@@ -304,7 +308,10 @@ defineOptions({ name: 'Comment' })
                   </template>
                 </Comment>
               </li>
-              <li v-if="hasMore()">
+              <li
+                v-if="hasMore()"
+                :class="classes?.replyItem"
+              >
                 <button
                   type="button"
                   :class="classes?.loadMoreRepliesButton"

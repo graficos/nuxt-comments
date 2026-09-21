@@ -140,6 +140,8 @@ The thread toggle ("View replies") only renders when the comment actually has re
 | `actions`             | `<div data-comment-actions>` — reply/edit/delete          |
 | `reactions`           | `<div data-comment-reactions>`                            |
 | `replies`             | `<div data-comment-replies>` — thread toggle + list       |
+| `repliesList`         | `<ol data-replies-list>` — the reply list (e.g. border)   |
+| `replyItem`           | Each `<li>` in the reply list, including the load-more item |
 | `replyButton`         | Reply `<button>`                                          |
 | `editButton`          | Edit `<button>`                                           |
 | `deleteButton`        | Delete `<button>`                                         |
