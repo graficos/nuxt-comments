@@ -1,5 +1,62 @@
 # @graficos/nuxt-comments
 
+## 0.5.0
+
+### Minor Changes
+
+- 179b8b9: Add a user PII-erasure primitive and erase all personal data on user deletion.
+  
+  - **New endpoint** `DELETE /api/_comments/users/:userId`. It erases the target
+    user's comments-domain personal data. Authorization is server-side: the caller
+    must be the user themself, or a moderator whose Better Auth session role
+    matches the new server-only `comments.auth.adminRole` option (default
+    `'admin'`). The role is read from the server session only — never from the
+    request — and the check fails closed when no role is configured.
+  - **`deleteCommentsUser`** (server-only utility) now erases everything too.
+  - **Full erasure:** the user's reactions are hard-deleted, comments without
+    replies are hard-deleted, and comments with replies become tombstones with
+    `user_id`, `author_name`, `author_image` and `body` all set to `NULL` —
+    including comments the user had already soft-deleted. No user id, name,
+    avatar, body or reaction survives.
+  - **Migration required:** `migrations/0002_user_id_nullable.sql` makes
+    `comments.user_id` nullable. Copy the new file (or re-point `migrations_dir`)
+    and re-run `wrangler d1 migrations apply`.
+  - **Reserved prefix:** `users/` is now reserved alongside `threads/`; a resource
+    id beginning with `users/` is rejected. If you used such a resource id, rename
+    it before upgrading.
+  - Docs: new [privacy guide](./docs/privacy.md) covering the erasure primitive,
+    the two-step account-deletion recipe, and the consumer's controller duties.
+- 0d663cb: Server-render the comment list; hydrate reactions client-side.
+  
+  - `useComments` now fetches the top-level page with `useAsyncData`, so comments
+    are present in the SSR HTML and payload instead of rendering client-only.
+    `useComments` keeps the same public API.
+  - Reactions are per-viewer and dynamic, so they are no longer embedded in the
+    content responses. `resource.get` / `replies.get` return comments without
+    `reactionCounts` / `viewerReactions`; the client fetches them in one batch
+    from `GET /api/_comments/threads/reactions?ids=...` after hydration and merges
+    them in. This keeps the SSR payload cacheable and free of viewer state.
+  - `useComments`' list is safe to use outside `<ClientOnly>` now.
+  - On **prerendered** pages there is no request runtime/database at build time, so
+    the server fetch is skipped there (`server: !import.meta.prerender`); the client
+    loads the first page after hydration and the prerendered HTML shows the loading
+    state. Runtime SSR pages still server-render the list.
+  
+  Also fixes the server session helper: `getUserSession` is imported by name from
+  `#imports` instead of a namespace import, which resolved to `undefined` in the
+  real Nitro server build (it worked only in the isolated test mock).
+
+### Patch Changes
+
+- 0d663cb: Hide actions and reactions on deleted comments, and reflect edits in place.
+  
+  - A soft-deleted comment (or reply) no longer renders the action row, so its
+    reaction buttons cannot be clicked. Reacting to a deleted comment previously
+    failed server-side (`not_found`) and replaced the whole list with the error
+    state. A deleted comment's reply-thread toggle still renders when it has replies.
+  - `useComments.updateComment` now patches the edited comment — top-level or a
+    nested reply — in place, so an edit shows immediately without a refetch.
+
 ## 0.4.0
 
 ### Minor Changes
