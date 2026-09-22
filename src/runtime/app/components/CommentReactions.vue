@@ -23,6 +23,7 @@ function toggle(type: string) {
 
 <template>
   <div
+    v-if="!props.comment.deletedAt"
     role="group"
     :aria-label="t('reactions')"
     data-nc-reactions

@@ -50,6 +50,17 @@ export interface Reaction {
   createdAt: string
 }
 
+/**
+ * Reaction state for a single comment, as returned by the batch reactions
+ * endpoint. Kept out of the content endpoints so the comment list stays public
+ * and cacheable while reactions hydrate client-side.
+ */
+export interface ReactionSummary {
+  commentId: string
+  counts: Record<string, number>
+  viewerReactions: string[]
+}
+
 /** Opaque cursor for cursor-based pagination. */
 export interface Cursor {
   createdAt: string

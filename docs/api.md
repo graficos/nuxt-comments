@@ -12,8 +12,13 @@ All routes live under the internal `/api/_comments` namespace so they cannot col
 | `POST` | `/api/_comments/threads/:commentId/replies` | required | Create a reply. |
 | `PATCH` | `/api/_comments/threads/:commentId` | required + owner | Edit your own comment. |
 | `DELETE` | `/api/_comments/threads/:commentId` | required + owner | Delete your own comment. |
+| `GET` | `/api/_comments/threads/reactions?ids=a,b,c` | public | Batch reaction summaries (counts + viewer reactions) for comment ids. |
 | `POST` | `/api/_comments/threads/:commentId/reactions` | required | Add a reaction `{ type }`. |
 | `DELETE` | `/api/_comments/threads/:commentId/reactions/:type` | required | Remove your reaction of a type. |
+
+### Content vs reactions
+
+Comment list/reply responses contain **no reaction data**. Reactions are per-viewer and dynamic, so they are fetched separately (`GET .../threads/reactions?ids=...`) and merged client-side. This keeps the comment content public and cacheable while `useComments` handles the hydration. Reaction fields (`reactionCounts`, `viewerReactions`) only appear on comments after the client hydrates them.
 
 ### Why `threads/`?
 
@@ -56,13 +61,30 @@ GET /api/_comments/blog/my-post?limit=20&cursor=<opaque>
 
 ```json
 {
-  "items": [ /* comments with reactionCounts and viewerReactions */ ],
+  "items": [ /* comments (content only — no reaction data) */ ],
   "nextCursor": "eyJjcmVhdGVkQXQiOiI...",
   "hasMore": true
 }
 ```
 
 Top-level comments only. Replies are fetched separately from `/threads/:commentId/replies`, so opening a post never loads the entire discussion.
+
+### Reaction summaries
+
+```http
+GET /api/_comments/threads/reactions?ids=01JB...,01JC...
+```
+
+```json
+{
+  "items": [
+    { "commentId": "01JB...", "counts": { "like": 2 }, "viewerReactions": ["like"] },
+    { "commentId": "01JC...", "counts": {}, "viewerReactions": [] }
+  ]
+}
+```
+
+`ids` is a comma-separated list (deduped; at most `pagination.maxPageSize`). `viewerReactions` reflects the current session (empty when unauthenticated). Unknown ids are returned with empty counts.
 
 ## Pagination
 

@@ -1,5 +1,9 @@
 import type { H3Event } from 'h3'
-import * as nitroImports from '#imports'
+// `getUserSession` is a Nitro auto-import registered by `@nuxtjs/better-auth`
+// (`addServerImports`). It is available on the consumer's `#imports` at runtime
+// but not on this module's isolated `#imports` type surface.
+// @ts-expect-error - provided by @nuxtjs/better-auth
+import { getUserSession } from '#imports'
 
 export interface ViewerInfo {
   id: string
@@ -12,16 +16,6 @@ interface SessionLike {
 }
 
 /**
- * `getUserSession` is a Nitro auto-import provided by `@nuxtjs/better-auth`
- * (registered via `addServerImports`). It lives on the consumer's `#imports`,
- * but not on this module's isolated `#imports` type surface, so we reach it
- * through the namespace and give it a local type.
- */
-const nitro = nitroImports as unknown as {
-  getUserSession: (event: H3Event) => Promise<SessionLike>
-}
-
-/**
  * Resolve the current authenticated Better Auth user from the session.
  * Returns `null` when unauthenticated (public read paths use this).
  *
@@ -29,7 +23,7 @@ const nitro = nitroImports as unknown as {
  */
 export async function getViewer(event: H3Event): Promise<ViewerInfo | null> {
   try {
-    const session = await nitro.getUserSession(event)
+    const session = await (getUserSession as unknown as (event: H3Event) => Promise<SessionLike>)(event)
     if (!session?.user) return null
     return {
       id: session.user.id,

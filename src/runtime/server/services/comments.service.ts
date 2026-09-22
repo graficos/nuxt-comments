@@ -1,4 +1,4 @@
-import type { Comment, Cursor, Reaction } from '../../shared/types'
+import type { Comment, Cursor, Reaction, ReactionSummary } from '../../shared/types'
 import type { CommentsStore } from '../repositories/comments-store'
 import type { ViewerInfo } from './auth'
 import { normalizeResource, ResourceLengthError } from '../../shared/resource'
@@ -29,21 +29,6 @@ export interface CommentsServiceDeps {
    * Mutations call this before performing any work.
    */
   checkRateLimit?: (scope: string) => Promise<void>
-}
-
-function attachReactions(
-  comments: Comment[],
-  allReactions: Reaction[],
-  viewerReactions: Reaction[],
-): void {
-  for (const c of comments) {
-    const counts: Record<string, number> = {}
-    for (const r of allReactions) {
-      if (r.commentId === c.id) counts[r.type] = (counts[r.type] ?? 0) + 1
-    }
-    c.reactionCounts = counts
-    c.viewerReactions = viewerReactions.filter(r => r.commentId === c.id).map(r => r.type)
-  }
 }
 
 function decodeCursor(cursor?: string): Cursor | undefined {
@@ -78,11 +63,6 @@ export function createCommentsService(deps: CommentsServiceDeps) {
   }> {
     const limit = clampLimit(opts?.limit, config)
     const page = await store.listTopLevel(resource, { cursor: decodeCursor(opts?.cursor), limit })
-    const viewer = await deps.getViewer()
-    const ids = page.items.map(c => c.id)
-    const allReactions = await store.listReactionsForComments(ids)
-    const viewerReactions = viewer ? await store.getUserReactions(viewer.id, ids) : []
-    attachReactions(page.items, allReactions, viewerReactions)
     return {
       items: page.items,
       nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
@@ -99,16 +79,35 @@ export function createCommentsService(deps: CommentsServiceDeps) {
     const parent = await store.getComment(commentId)
     if (!parent) throw notFound('comment not found')
     const page = await store.listReplies(commentId, { cursor: decodeCursor(opts?.cursor), limit })
-    const viewer = await deps.getViewer()
-    const ids = page.items.map(c => c.id)
-    const allReactions = await store.listReactionsForComments(ids)
-    const viewerReactions = viewer ? await store.getUserReactions(viewer.id, ids) : []
-    attachReactions(page.items, allReactions, viewerReactions)
     return {
       items: page.items,
       nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
       hasMore: page.hasMore,
     }
+  }
+
+  /**
+   * Reaction summaries for a set of comment ids (counts + the viewer's own
+   * reactions). Reactions are intentionally not part of the content endpoints:
+   * the list stays public/cacheable and reactions hydrate client-side.
+   */
+  async function listReactionSummaries(commentIds: string[]): Promise<ReactionSummary[]> {
+    if (commentIds.length === 0) return []
+    const viewer = await deps.getViewer()
+    const allReactions = await store.listReactionsForComments(commentIds)
+    const viewerReactions = viewer ? await store.getUserReactions(viewer.id, commentIds) : []
+    const byComment = new Map<string, ReactionSummary>()
+    for (const commentId of commentIds) {
+      byComment.set(commentId, { commentId, counts: {}, viewerReactions: [] })
+    }
+    for (const reaction of allReactions) {
+      const entry = byComment.get(reaction.commentId)
+      if (entry) entry.counts[reaction.type] = (entry.counts[reaction.type] ?? 0) + 1
+    }
+    for (const reaction of viewerReactions) {
+      byComment.get(reaction.commentId)?.viewerReactions.push(reaction.type)
+    }
+    return [...byComment.values()]
   }
 
   async function createComment(input: {
@@ -200,6 +199,7 @@ export function createCommentsService(deps: CommentsServiceDeps) {
   return {
     listTopLevel,
     listReplies,
+    listReactionSummaries,
     getComment,
     createComment,
     updateComment,

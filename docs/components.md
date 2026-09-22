@@ -125,7 +125,7 @@ Renders one comment and recursively renders its loaded replies.
 
 Events: `reply`, `edit`, `delete`, `react`, `unreact`, `toggle-replies`, `load-replies`.
 
-A soft-deleted comment renders `[deleted]`; a comment whose author snapshot was cleared renders `[deleted author]`.
+A soft-deleted comment renders `[deleted]`; a comment whose author snapshot was cleared renders `[deleted author]`. A deleted comment exposes **no actions or reactions** (the action row is omitted); its reply thread toggle still renders when it has replies.
 
 The thread toggle ("View replies") only renders when the comment actually has replies — driven by `comment.replyCount` (populated by the list endpoints) or an already-loaded thread.
 
@@ -209,7 +209,7 @@ const {
   refresh, // () => Promise<void>
   createComment, // (body: string) => Promise<Comment>
   reply, // (parentId: string, body: string) => Promise<Comment>
-  updateComment, // (commentId: string, body: string) => Promise<Comment>
+  updateComment, // (commentId: string, body: string) => Promise<Comment>  patches the comment in place
   deleteComment, // (commentId: string) => Promise<void>
   react, // (commentId: string, type: string) => Promise<void>
   unreact, // (commentId: string, type: string) => Promise<void>
@@ -224,6 +224,10 @@ state. In-flight loads are guarded: a stale response cannot overwrite a newer re
 never fetched twice concurrently. `appendReply`, `patchReaction`, and `patchDeleted` let a UI update local
 state after a mutation (for example the built-in `<Comments>` prepends a posted reply, patches reaction
 counts, and shows the `[deleted]` tombstone after deleting a reply) instead of refetching.
+
+The top-level list is **server-rendered** via `useAsyncData` (public content), so comments appear in the SSR
+HTML. Reactions are per-viewer: they are fetched client-side after hydration through the batch reactions
+endpoint and merged in, keeping the SSR payload free of viewer-specific state.
 
 ### `useCommentsSession()`
 

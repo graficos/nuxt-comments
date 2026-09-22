@@ -1,7 +1,7 @@
-import { ref, watch, type Ref } from 'vue'
-import { useRuntimeConfig, createError } from '#imports'
+import { ref, watch, computed, type Ref } from 'vue'
+import { useRuntimeConfig, createError, useAsyncData, useRequestFetch } from '#imports'
 import { $fetch } from 'ofetch'
-import type { Comment } from '../../shared/types'
+import type { Comment, ReactionSummary } from '../../shared/types'
 
 export interface UseCommentsOptions {
   /** Initial page size. Defaults to module pagination.pageSize. */
@@ -48,10 +48,21 @@ export interface UseCommentsReturn {
   patchDeleted: (commentId: string) => void
 }
 
+interface CommentPage {
+  items: Comment[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
 const API_BASE = '/api/_comments'
 
 /**
  * Composable for interacting with the comments API for a given resource.
+ *
+ * The top-level comment list is server-rendered through `useAsyncData` (public
+ * content, cacheable). Reactions are per-viewer and therefore **not** part of
+ * the content responses: they hydrate on the client through the batch reactions
+ * endpoint and are patched locally on mutation.
  *
  * Resource identifiers are opaque strings (see the resource contract in
  * the README). They are URL-encoded onto the API path.
@@ -61,8 +72,13 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   const defaultLimit = options?.limit ?? config.public.comments?.pagination?.pageSize ?? 20
 
   const resourceRef: Ref<string> = typeof resource === 'string' ? ref(resource) : resource
+
+  // SSR needs a request-aware fetch (relative URLs resolve against the request);
+  // the browser can use `$fetch` directly.
+  const requestFetch = (import.meta.server ? useRequestFetch() : $fetch) as typeof $fetch
+
   const comments = ref<Comment[]>([])
-  const loading = ref(false)
+  const fetchingMore = ref(false)
   const error = ref<Error | null>(null)
   const hasMore = ref(false)
   const nextCursor = ref<string | null>(null)
@@ -74,9 +90,10 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   const replyHasMore = ref<Record<string, boolean>>({})
 
   // Guards against out-of-order responses and duplicate requests.
-  let loadSeq = 0
   let resourceEpoch = 0
   const repliesInFlight = new Set<string>()
+  // Comment ids whose reactions have already been hydrated for this resource.
+  const hydratedIds = new Set<string>()
 
   function resetThreadState() {
     repliesByComment.value = {}
@@ -85,44 +102,83 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     replyHasMore.value = {}
   }
 
-  async function load(reset = false) {
-    const seq = ++loadSeq
-    loading.value = true
-    error.value = null
+  function fetchPage(resource: string, cursor?: string | null): Promise<CommentPage> {
+    const path = `${API_BASE}/${encodeResource(resource)}`
+    return requestFetch<CommentPage>(path, {
+      query: { limit: defaultLimit, cursor: cursor ?? undefined },
+    })
+  }
+
+  // Initial page: fetched during SSR, serialized into the payload, and hydrated
+  // on the client. `watch` refetches when the resource changes.
+  //
+  // Prerender runs at build time without a request runtime or database binding,
+  // so skip the server fetch there and let the client load the first page after
+  // hydration (the component shows its loading state in the prerendered HTML).
+  const initial = useAsyncData(
+    () => `nuxt-comments:${resourceRef.value}:${defaultLimit}`,
+    () => fetchPage(resourceRef.value),
+    {
+      watch: [resourceRef],
+      server: !import.meta.prerender,
+      default: (): CommentPage => ({ items: [], nextCursor: null, hasMore: false }),
+    },
+  )
+
+  watch(resourceRef, () => {
+    resourceEpoch++
+    hydratedIds.clear()
+    resetThreadState()
+  })
+
+  watch(initial.data, (page) => {
+    if (!page) return
+    // `useAsyncData` can re-emit the same page; preserve any reaction state we
+    // already hydrated (or patched locally) instead of clobbering it.
+    const existing = new Map(comments.value.map(c => [c.id, c]))
+    comments.value = page.items.map((c) => {
+      const prev = existing.get(c.id)
+      return prev ? { ...c, reactionCounts: prev.reactionCounts, viewerReactions: prev.viewerReactions } : c
+    })
+    nextCursor.value = page.nextCursor
+    hasMore.value = page.hasMore
+    scheduleReactionHydration(page.items)
+  }, { immediate: true, flush: 'sync' })
+
+  watch(initial.error, (err) => {
+    if (err) error.value = err as unknown as Error
+  }, { flush: 'sync' })
+
+  const loading = computed(() => initial.pending.value || fetchingMore.value)
+
+  async function fetchMore() {
+    if (!hasMore.value || fetchingMore.value) return
+    fetchingMore.value = true
+    const epoch = resourceEpoch
     try {
-      const path = `${API_BASE}/${encodeResource(resourceRef.value)}`
-      const payload = await $fetch<{
-        items: Comment[]
-        nextCursor: string | null
-        hasMore: boolean
-      }>(path, {
-        query: {
-          limit: defaultLimit,
-          cursor: reset ? undefined : nextCursor.value,
-        },
-      })
-      // A newer load started while this one was in flight: drop the stale result.
-      if (seq !== loadSeq) return
-      if (reset) comments.value = []
-      comments.value = [...comments.value, ...payload.items]
-      nextCursor.value = payload.nextCursor
-      hasMore.value = payload.hasMore
+      const page = await fetchPage(resourceRef.value, nextCursor.value)
+      // A newer resource replaced this one while in flight: drop the result.
+      if (epoch !== resourceEpoch) return
+      comments.value = [...comments.value, ...page.items]
+      nextCursor.value = page.nextCursor
+      hasMore.value = page.hasMore
+      scheduleReactionHydration(page.items)
     }
     catch (err) {
-      if (seq !== loadSeq) return
+      if (epoch !== resourceEpoch) return
       error.value = err instanceof Error ? err : createError(String(err))
     }
     finally {
-      if (seq === loadSeq) loading.value = false
+      if (epoch === resourceEpoch) fetchingMore.value = false
     }
   }
 
-  // Initial load + reload (and thread reset) when the resource changes.
-  watch(resourceRef, () => {
+  async function refresh() {
     resourceEpoch++
+    hydratedIds.clear()
     resetThreadState()
-    void load(true)
-  }, { immediate: true })
+    await initial.refresh()
+  }
 
   async function loadReplies(commentId: string) {
     // Ignore a second request for a thread that is already loading.
@@ -130,11 +186,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     repliesInFlight.add(commentId)
     const epoch = resourceEpoch
     try {
-      const payload = await $fetch<{
-        items: Comment[]
-        nextCursor: string | null
-        hasMore: boolean
-      }>(`${API_BASE}/threads/${encodeURIComponent(commentId)}/replies`, {
+      const payload = await requestFetch<CommentPage>(`${API_BASE}/threads/${encodeURIComponent(commentId)}/replies`, {
         query: {
           limit: defaultLimit,
           cursor: replyCursors.value[commentId] ?? undefined,
@@ -148,6 +200,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
       }
       replyCursors.value = { ...replyCursors.value, [commentId]: payload.nextCursor }
       replyHasMore.value = { ...replyHasMore.value, [commentId]: payload.hasMore }
+      scheduleReactionHydration(payload.items)
     }
     finally {
       repliesInFlight.delete(commentId)
@@ -168,38 +221,100 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     expanded.value = { ...expanded.value, [commentId]: true }
   }
 
-  async function fetchMore() {
-    if (!hasMore.value || loading.value) return
-    await load(false)
+  // --- Reaction hydration (client only) -------------------------------------
+  // Reactions are not part of the content responses, so they are fetched in a
+  // single batch once comments arrive and merged in. Batching across the
+  // initial page and lazy reply loads avoids one request per comment.
+  let reactionQueue: Comment[] = []
+  let reactionFlushScheduled = false
+
+  function scheduleReactionHydration(items: Comment[]) {
+    if (!import.meta.client || items.length === 0) return
+    const fresh = items.filter(c => !hydratedIds.has(c.id))
+    if (fresh.length === 0) return
+    for (const c of fresh) hydratedIds.add(c.id)
+    reactionQueue.push(...fresh)
+    if (reactionFlushScheduled) return
+    reactionFlushScheduled = true
+    queueMicrotask(() => {
+      reactionFlushScheduled = false
+      const batch = reactionQueue
+      reactionQueue = []
+      void hydrateReactions(batch)
+    })
   }
 
-  async function refresh() {
-    await load(true)
+  async function hydrateReactions(items: Comment[]) {
+    const ids = [...new Set(items.map(c => c.id))]
+    if (ids.length === 0) return
+    try {
+      const payload = await requestFetch<{ items: ReactionSummary[] }>(`${API_BASE}/threads/reactions`, {
+        query: { ids: ids.join(',') },
+      })
+      applyReactionSummaries(payload.items)
+    }
+    catch {
+      // Reactions are non-critical: a failed hydration must not surface as a
+      // load error (which would replace the list) or block content.
+    }
+  }
+
+  function applyReactionSummaries(summaries: ReactionSummary[]) {
+    if (summaries.length === 0) return
+    const byId = new Map(summaries.map(s => [s.commentId, s]))
+    function patch(c: Comment): Comment {
+      const summary = byId.get(c.id)
+      if (!summary) return c
+      return { ...c, reactionCounts: summary.counts, viewerReactions: summary.viewerReactions }
+    }
+    comments.value = comments.value.map(patch)
+    const replies: Record<string, Comment[]> = {}
+    for (const [id, list] of Object.entries(repliesByComment.value)) {
+      replies[id] = list.map(patch)
+    }
+    repliesByComment.value = replies
   }
 
   async function createComment(body: string): Promise<Comment> {
     const path = `${API_BASE}/${encodeResource(resourceRef.value)}`
-    return await $fetch<Comment>(path, { method: 'POST', body: { body } })
+    return await requestFetch<Comment>(path, { method: 'POST', body: { body } })
   }
 
   async function reply(parentId: string, body: string): Promise<Comment> {
-    return await $fetch<Comment>(`${API_BASE}/threads/${parentId}/replies`, { method: 'POST', body: { body } })
+    return await requestFetch<Comment>(`${API_BASE}/threads/${parentId}/replies`, { method: 'POST', body: { body } })
   }
 
   async function updateComment(commentId: string, body: string): Promise<Comment> {
-    return await $fetch<Comment>(`${API_BASE}/threads/${commentId}`, { method: 'PATCH', body: { body } })
+    const updated = await requestFetch<Comment>(`${API_BASE}/threads/${commentId}`, { method: 'PATCH', body: { body } })
+    // Reflect the edit in place so the UI updates without a refetch. Only the
+    // server-owned fields are copied; reaction/reply state stays intact.
+    patchComment(commentId, { body: updated.body, updatedAt: updated.updatedAt })
+    return updated
   }
 
   async function deleteComment(commentId: string): Promise<void> {
-    await $fetch(`${API_BASE}/threads/${commentId}`, { method: 'DELETE' })
+    await requestFetch(`${API_BASE}/threads/${commentId}`, { method: 'DELETE' })
   }
 
   async function react(commentId: string, type: string): Promise<void> {
-    await $fetch(`${API_BASE}/threads/${commentId}/reactions`, { method: 'POST', body: { type: type } })
+    await requestFetch(`${API_BASE}/threads/${commentId}/reactions`, { method: 'POST', body: { type } })
   }
 
   async function unreact(commentId: string, type: string): Promise<void> {
-    await $fetch(`${API_BASE}/threads/${commentId}/reactions/${encodeURIComponent(type)}`, { method: 'DELETE' })
+    await requestFetch(`${API_BASE}/threads/${commentId}/reactions/${encodeURIComponent(type)}`, { method: 'DELETE' })
+  }
+
+  /** Patch a comment in place (top-level or nested reply) with the given changes. */
+  function patchComment(commentId: string, changes: Partial<Comment>) {
+    function patch(c: Comment): Comment {
+      return c.id === commentId ? { ...c, ...changes } : c
+    }
+    comments.value = comments.value.map(patch)
+    const replies: Record<string, Comment[]> = {}
+    for (const [id, list] of Object.entries(repliesByComment.value)) {
+      replies[id] = list.map(patch)
+    }
+    repliesByComment.value = replies
   }
 
   /** Insert a reply that was just created, newest first, and open its thread. */

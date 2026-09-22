@@ -40,6 +40,21 @@ describe('<Comment> (Nuxt environment)', () => {
     expect(wrapper.text()).not.toContain('hello')
   })
 
+  it('hides actions and reactions for a deleted comment', async () => {
+    const wrapper = await mountSuspended(Comment, {
+      props: {
+        comment: makeComment({ body: null, deletedAt: 'x', deletedBy: 'author', replyCount: 1 }),
+        reactionTypes: ['like'],
+        canEdit: true,
+      },
+    })
+    expect(wrapper.find('[data-nc-comment-footer]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Reply to comment c1"]').exists()).toBe(false)
+    expect(wrapper.find('[data-nc-reaction-type="like"]').exists()).toBe(false)
+    // the thread toggle still renders for a deleted comment that has replies
+    expect(wrapper.find('button[aria-label="Show replies to comment c1"]').exists()).toBe(true)
+  })
+
   it('renders a deleted author as [deleted author]', async () => {
     const wrapper = await mountSuspended(Comment, {
       props: { comment: makeComment({ authorName: null }) },

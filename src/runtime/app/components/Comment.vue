@@ -139,8 +139,10 @@ defineOptions({ name: 'Comment' })
       </slot>
 
       <!-- Action row: reply/edit/delete and reactions share one wrapper so a
-           consumer can lay them out together (e.g. `display: flex`). -->
+           consumer can lay them out together (e.g. `display: flex`). A deleted
+           comment has no actions and no reactions, so the row is omitted. -->
       <div
+        v-if="!comment.deletedAt"
         :class="classes?.footer"
         data-nc-comment-footer
       >

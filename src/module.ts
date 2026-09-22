@@ -162,6 +162,7 @@ export default defineNuxtModule<ModuleOptions>({
       'comment.delete',
       'replies.get',
       'replies.post',
+      'reactions.get',
       'reactions.post',
       'reactions-type.delete',
     ]
@@ -172,6 +173,7 @@ export default defineNuxtModule<ModuleOptions>({
       'comment.delete': `${apiBase}/threads/:commentId`,
       'replies.get': `${apiBase}/threads/:commentId/replies`,
       'replies.post': `${apiBase}/threads/:commentId/replies`,
+      'reactions.get': `${apiBase}/threads/reactions`,
       'reactions.post': `${apiBase}/threads/:commentId/reactions`,
       'reactions-type.delete': `${apiBase}/threads/:commentId/reactions/:type`,
     }

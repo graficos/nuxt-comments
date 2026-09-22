@@ -8,6 +8,7 @@ import commentPatch from '../../src/runtime/server/api/_comments/comment.patch'
 import commentDelete from '../../src/runtime/server/api/_comments/comment.delete'
 import repliesGet from '../../src/runtime/server/api/_comments/replies.get'
 import repliesPost from '../../src/runtime/server/api/_comments/replies.post'
+import reactionsGet from '../../src/runtime/server/api/_comments/reactions.get'
 import reactionsPost from '../../src/runtime/server/api/_comments/reactions.post'
 import reactionsTypeDelete from '../../src/runtime/server/api/_comments/reactions-type.delete'
 
@@ -19,6 +20,7 @@ router.patch('/api/_comments/threads/:commentId', commentPatch)
 router.delete('/api/_comments/threads/:commentId', commentDelete)
 router.get('/api/_comments/threads/:commentId/replies', repliesGet)
 router.post('/api/_comments/threads/:commentId/replies', repliesPost)
+router.get('/api/_comments/threads/reactions', reactionsGet)
 router.post('/api/_comments/threads/:commentId/reactions', reactionsPost)
 router.delete('/api/_comments/threads/:commentId/reactions/:type', reactionsTypeDelete)
 const app = createApp()
@@ -221,13 +223,13 @@ describe('comments API (workers runtime)', () => {
       })
       expect(duplicate.status).toBe(200)
 
-      const list = await api<{ items: Array<{ reactionCounts: Record<string, number> }> }>('GET', '/api/_comments/blog/reactions')
-      expect(list.body.items[0]!.reactionCounts.like).toBe(1)
+      const list = await api<{ items: Array<{ counts: Record<string, number> }> }>('GET', `/api/_comments/threads/reactions?ids=${comment.body.id}`)
+      expect(list.body.items[0]!.counts.like).toBe(1)
 
       const removed = await api('DELETE', `/api/_comments/threads/${comment.body.id}/reactions/like`, { user: BOB })
       expect(removed.status).toBe(200)
-      const after = await api<{ items: Array<{ reactionCounts: Record<string, number> }> }>('GET', '/api/_comments/blog/reactions')
-      expect(after.body.items[0]!.reactionCounts.like ?? 0).toBe(0)
+      const after = await api<{ items: Array<{ counts: Record<string, number> }> }>('GET', `/api/_comments/threads/reactions?ids=${comment.body.id}`)
+      expect(after.body.items[0]!.counts.like ?? 0).toBe(0)
     })
 
     it('rejects a disallowed reaction type with 422', async () => {
