@@ -17,7 +17,7 @@ import type {
 interface CommentRow {
   id: string
   resource: string
-  user_id: string
+  user_id: string | null
   parent_id: string | null
   body: string | null
   author_name: string | null
@@ -201,9 +201,14 @@ export class D1CommentsStore implements CommentsStore {
         return
       }
     }
-    // Keep a tombstone and clear reactions.
+    // Keep a tombstone and clear reactions. On `user-deletion` the tombstone
+    // must carry no personal data, so the user id is nulled too; an author's
+    // own soft-delete keeps ownership (the id is erased later, on account
+    // deletion).
     await this.db.prepare(
-      'UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
+      policy === 'user-deletion'
+        ? 'UPDATE comments SET user_id = NULL, body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL'
+        : 'UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
     )
       .bind(ts, policy, ts, id)
       .run()
@@ -279,17 +284,16 @@ export class D1CommentsStore implements CommentsStore {
     // number of parameters, so this scales past D1's 100-bound-parameter
     // limit. Statements run in order within the batch:
     //   1. drop the user's reactions;
-    //   2. scrub author snapshots from every comment the user owns,
-    //      including ones already soft-deleted before account deletion;
-    //   3. soft-delete comments that anchor a thread;
-    //   4. after (3), every remaining active comment is a leaf -> hard-delete.
-    // A failure anywhere rolls the whole batch back, so the account is never
-    // left half-erased.
-    const [reactions, , preserved, removed] = await this.db.batch([
+    //   2. soft-delete comments that anchor a thread (they must survive so the
+    //      thread keeps its context), keeping user_id for step 4's filter;
+    //   3. after (2), every remaining active comment is a leaf -> hard-delete;
+    //   4. scrub the survivors: null user_id, author_name and author_image on
+    //      every row that still carries the user id, including tombstones the
+    //      user had already soft-deleted before account deletion.
+    // No personal data is left behind, and a failure anywhere rolls the whole
+    // batch back, so the account is never left half-erased.
+    const [reactions, preserved, removed] = await this.db.batch([
       this.db.prepare('DELETE FROM comment_reactions WHERE user_id = ?').bind(userId),
-      this.db.prepare(
-        'UPDATE comments SET author_name = NULL, author_image = NULL WHERE user_id = ?',
-      ).bind(userId),
       this.db.prepare(
         `UPDATE comments
            SET body = NULL, deleted_at = ?, deleted_by = 'user-deletion', updated_at = ?
@@ -300,6 +304,9 @@ export class D1CommentsStore implements CommentsStore {
         `DELETE FROM comments
          WHERE user_id = ? AND deleted_at IS NULL
            AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
+      ).bind(userId),
+      this.db.prepare(
+        'UPDATE comments SET user_id = NULL, author_name = NULL, author_image = NULL WHERE user_id = ?',
       ).bind(userId),
     ])
 

@@ -13,8 +13,8 @@ export interface Comment {
   id: string
   /** Normalized resource identifier (opaque string). */
   resource: string
-  /** Author user id. */
-  userId: string
+  /** Author user id. `null` once the owner's data has been erased (user-deletion). */
+  userId: string | null
   /** Parent comment id. `null` for top-level comments. */
   parentId: string | null
   /** Original plain-text body. `null` when the comment has been soft-deleted. */

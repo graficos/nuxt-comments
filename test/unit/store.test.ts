@@ -156,6 +156,7 @@ describe('D1CommentsStore', () => {
     const p = await store.getComment(parent.id)
     expect(p).not.toBeNull()
     expect(p!.body).toBeNull()
+    expect(p!.userId).toBeNull()
     expect(p!.authorName).toBeNull()
     expect(p!.authorImage).toBeNull()
     expect(p!.deletedBy).toBe('user-deletion')
@@ -212,11 +213,12 @@ describe('D1CommentsStore', () => {
     ).first<{ c: number }>()
     expect(remainingLeaves!.c).toBe(0)
 
-    // Every parent is a scrubbed, preserved tombstone.
+    // Every parent is a scrubbed, preserved tombstone with no user id.
     const preservedParents = await env.DB.prepare(
       `SELECT COUNT(*) AS c FROM comments
         WHERE id LIKE 'bulk-p-%' AND deleted_at IS NOT NULL
-          AND deleted_by = 'user-deletion' AND body IS NULL AND author_name IS NULL`,
+          AND deleted_by = 'user-deletion' AND body IS NULL AND author_name IS NULL
+          AND user_id IS NULL`,
     ).first<{ c: number }>()
     expect(preservedParents!.c).toBe(PARENTS)
 
@@ -251,5 +253,38 @@ describe('D1CommentsStore', () => {
     // getUserReactions would bind 101 params without chunking.
     expect(await store.getUserReactions('cap-viewer', ids)).toHaveLength(COUNT)
     expect(await store.listReactionsForComments(ids)).toHaveLength(COUNT)
+  })
+
+  it('deleteUserData: erases the user id from a tombstone the user had already soft-deleted', async () => {
+    const parent = await store.createComment({ resource: '/blog/erase', userId: 'victim', body: 'p' })
+    await store.createComment({ resource: '/blog/erase', userId: 'other', body: 'r', parentId: parent.id })
+    // The author soft-deletes first, then the account is deleted.
+    await store.deleteComment(parent.id, 'author')
+    await store.deleteUserData('victim')
+
+    const p = await store.getComment(parent.id)
+    expect(p!.userId).toBeNull()
+    expect(p!.authorName).toBeNull()
+    expect(p!.authorImage).toBeNull()
+    // The policy that created the tombstone is unchanged.
+    expect(p!.deletedBy).toBe('author')
+  })
+
+  it('deleteComment(user-deletion) nulls the user id on a preserved tombstone', async () => {
+    const parent = await store.createComment({ resource: '/blog/erase2', userId: 'victim', body: 'p' })
+    await store.createComment({ resource: '/blog/erase2', userId: 'other', body: 'r', parentId: parent.id })
+    await store.deleteComment(parent.id, 'user-deletion')
+
+    const p = await store.getComment(parent.id)
+    expect(p!.userId).toBeNull()
+    expect(p!.body).toBeNull()
+    expect(p!.deletedBy).toBe('user-deletion')
+  })
+
+  it('author deletion keeps the user id (ownership retained until account deletion)', async () => {
+    const c = await store.createComment({ resource: '/blog/keepid', userId: 'u1', body: 'bye' })
+    await store.deleteComment(c.id, 'author')
+    const got = await store.getComment(c.id)
+    expect(got!.userId).toBe('u1')
   })
 })

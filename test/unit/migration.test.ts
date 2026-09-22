@@ -20,6 +20,23 @@ describe('initial schema', () => {
     ).rejects.toThrow(/NOT NULL/i)
   })
 
+  it('allows a NULL user_id on comments (erased tombstones) but not on reactions', async () => {
+    const ts = '2025-01-01T00:00:00.000Z'
+    // 0002 makes comments.user_id nullable so a user's PII can be erased.
+    await expect(
+      env.DB.prepare(
+        'INSERT INTO comments (id, resource, user_id, body, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?)',
+      ).bind('null-uid-1', 'r', 'body', ts, ts).run(),
+    ).resolves.toBeDefined()
+
+    // comment_reactions.user_id stays NOT NULL — reactions are hard-deleted.
+    await expect(
+      env.DB.prepare(
+        'INSERT INTO comment_reactions (id, comment_id, user_id, type, created_at) VALUES (?, ?, NULL, ?, ?)',
+      ).bind('null-rx-1', 'null-uid-1', 'like', ts).run(),
+    ).rejects.toThrow(/NOT NULL/i)
+  })
+
   it('rejects a comment that has neither a body nor a deleted_at', async () => {
     await expect(
       env.DB.prepare(
