@@ -68,6 +68,7 @@ class MemoryStore implements CommentsStore {
     c.body = null
     c.deletedAt = new Date().toISOString()
     c.deletedBy = policy
+    if (policy === 'user-deletion') c.userId = null
   }
 
   async hasReplies(commentId: string): Promise<boolean> {
@@ -110,6 +111,7 @@ class MemoryStore implements CommentsStore {
     const reactions = [...this.reactions.values()].filter(r => r.userId === userId)
     for (const r of reactions) this.reactions.delete(r.id)
     for (const c of comments) {
+      c.userId = null
       if ([...this.comments.values()].some(x => x.parentId === c.id)) {
         c.body = null
         c.deletedAt = new Date().toISOString()
@@ -130,21 +132,24 @@ const CONFIG: CommentsServiceConfig = {
   maxResourceLength: 512,
   defaultPageSize: 20,
   maxPageSize: 100,
+  adminRole: 'admin',
 }
 
 function makeService(opts?: {
-  viewer?: { id: string, name: string | null, image: string | null } | null
+  viewer?: { id: string, name: string | null, image: string | null, role?: string | null } | null
   store?: MemoryStore
   config?: Partial<CommentsServiceConfig>
   limited?: boolean
 }) {
   const store = opts?.store ?? new MemoryStore()
-  const viewer = opts?.viewer === undefined ? { id: 'u1', name: 'Alice', image: null } : opts?.viewer
+  const viewer = opts?.viewer === undefined
+    ? { id: 'u1', name: 'Alice', image: null, role: null }
+    : opts?.viewer
   return {
     store,
     service: createCommentsService({
       store,
-      getViewer: async () => viewer,
+      getViewer: async () => (viewer ? { ...viewer, role: viewer.role ?? null } : null),
       config: { ...CONFIG, ...opts?.config },
       checkRateLimit: async () => {
         if (opts?.limited) throw new CommentsApiError('rate_limited', 'too many requests')
@@ -289,6 +294,60 @@ describe('CommentsService', () => {
     })
   })
 
+  describe('deleteUserData', () => {
+    it('lets a user erase their own data', async () => {
+      const { service } = makeService({ store })
+      const c = await service.createComment({ resource: 'blog/x', body: 'hi' })
+      const result = await service.deleteUserData('u1')
+      expect(result.comments).toBe(1)
+      expect(await store.getComment(c.id)).toBeNull()
+    })
+
+    it('lets an admin erase another user\'s data', async () => {
+      const victim = makeService({ store })
+      const c = await victim.service.createComment({ resource: 'blog/x', body: 'hi' })
+      const admin = makeService({ store, viewer: { id: 'root', name: 'Root', image: null, role: 'admin' } })
+      const result = await admin.service.deleteUserData('u1')
+      expect(result.comments).toBe(1)
+      expect(await store.getComment(c.id)).toBeNull()
+    })
+
+    it('honors a configured adminRole', async () => {
+      const victim = makeService({ store })
+      await victim.service.createComment({ resource: 'blog/x', body: 'hi' })
+      const mod = makeService({
+        store,
+        config: { adminRole: 'moderator' },
+        viewer: { id: 'mod', name: 'Mod', image: null, role: 'moderator' },
+      })
+      await expect(mod.service.deleteUserData('u1')).resolves.toMatchObject({ comments: 1 })
+    })
+
+    it('rejects a non-admin erasing another user\'s data', async () => {
+      const victim = makeService({ store })
+      await victim.service.createComment({ resource: 'blog/x', body: 'hi' })
+      const other = makeService({ store, viewer: { id: 'u2', name: 'Bob', image: null, role: 'user' } })
+      await expect(other.service.deleteUserData('u1')).rejects.toMatchObject({ code: 'forbidden' })
+    })
+
+    it('fails closed when the session has no role', async () => {
+      const victim = makeService({ store })
+      await victim.service.createComment({ resource: 'blog/x', body: 'hi' })
+      const noRole = makeService({ store, viewer: { id: 'u2', name: 'Bob', image: null } })
+      await expect(noRole.service.deleteUserData('u1')).rejects.toMatchObject({ code: 'forbidden' })
+    })
+
+    it('requires authentication', async () => {
+      const { service } = makeService({ store, viewer: null })
+      await expect(service.deleteUserData('u1')).rejects.toMatchObject({ code: 'unauthenticated' })
+    })
+
+    it('applies the rate limit', async () => {
+      const { service } = makeService({ store, limited: true })
+      await expect(service.deleteUserData('u1')).rejects.toMatchObject({ code: 'rate_limited' })
+    })
+  })
+
   describe('serviceConfigFromRuntimeConfig', () => {
     it('falls back to documented defaults', () => {
       const cfg = serviceConfigFromRuntimeConfig({})
@@ -299,7 +358,11 @@ describe('CommentsService', () => {
         maxResourceLength: 512,
         defaultPageSize: 20,
         maxPageSize: 100,
+        adminRole: 'admin',
       })
+    })
+    it('uses a provided adminRole', () => {
+      expect(serviceConfigFromRuntimeConfig({}, 'moderator').adminRole).toBe('moderator')
     })
     it('uses provided values', () => {
       const cfg = serviceConfigFromRuntimeConfig({

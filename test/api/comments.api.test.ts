@@ -11,6 +11,7 @@ import repliesPost from '../../src/runtime/server/api/_comments/replies.post'
 import reactionsGet from '../../src/runtime/server/api/_comments/reactions.get'
 import reactionsPost from '../../src/runtime/server/api/_comments/reactions.post'
 import reactionsTypeDelete from '../../src/runtime/server/api/_comments/reactions-type.delete'
+import usersDelete from '../../src/runtime/server/api/_comments/users.delete'
 
 // Build an h3 app mirroring the module's registered routes.
 const router = createRouter()
@@ -23,6 +24,7 @@ router.post('/api/_comments/threads/:commentId/replies', repliesPost)
 router.get('/api/_comments/threads/reactions', reactionsGet)
 router.post('/api/_comments/threads/:commentId/reactions', reactionsPost)
 router.delete('/api/_comments/threads/:commentId/reactions/:type', reactionsTypeDelete)
+router.delete('/api/_comments/users/:userId', usersDelete)
 const app = createApp()
 app.use(router)
 const handler = toWebHandler(app)
@@ -55,6 +57,7 @@ function errorCode(body: { data?: { code?: string } }): string | undefined {
 
 const ALICE: TestUser = { id: 'alice', name: 'Alice', image: null }
 const BOB: TestUser = { id: 'bob', name: 'Bob', image: null }
+const ADMIN: TestUser = { id: 'root', name: 'Root', image: null, role: 'admin' }
 
 /** Assert the paginated envelope shape (nextCursor may be null). */
 function expectPaginated(body: { items?: unknown, nextCursor?: unknown, hasMore?: unknown }): void {
@@ -255,6 +258,46 @@ describe('comments API (workers runtime)', () => {
         user: null,
       })
       expect(res.status).toBe(401)
+    })
+  })
+
+  describe('user data erasure', () => {
+    it('lets a user erase their own comments', async () => {
+      const c = await api<{ id: string }>('POST', '/api/_comments/blog/erasure-self', {
+        body: { body: 'mine' },
+        user: ALICE,
+      })
+      const res = await api<{ success: boolean, comments: number }>('DELETE', '/api/_comments/users/alice', { user: ALICE })
+      expect(res.status).toBe(200)
+      expect(res.body.success).toBe(true)
+      expect(res.body.comments).toBeGreaterThanOrEqual(1)
+
+      const after = await api<{ items: Array<{ id: string }> }>('GET', '/api/_comments/blog/erasure-self')
+      expect(after.body.items.find(x => x.id === c.body.id)).toBeUndefined()
+    })
+
+    it('lets an admin erase another user\'s data', async () => {
+      await api('POST', '/api/_comments/blog/erasure-admin', { body: { body: 'victim' }, user: ALICE })
+      const res = await api('DELETE', '/api/_comments/users/alice', { user: ADMIN })
+      expect(res.status).toBe(200)
+    })
+
+    it('forbids a non-admin erasing another user\'s data', async () => {
+      await api('POST', '/api/_comments/blog/erasure-forbidden', { body: { body: 'victim' }, user: ALICE })
+      const res = await api('DELETE', '/api/_comments/users/alice', { user: BOB })
+      expect(res.status).toBe(403)
+      expect(errorCode(res.body)).toBe('forbidden')
+    })
+
+    it('requires authentication', async () => {
+      const res = await api('DELETE', '/api/_comments/users/alice', { user: null })
+      expect(res.status).toBe(401)
+    })
+
+    it('rejects an over-long user id with 422', async () => {
+      const res = await api('DELETE', `/api/_comments/users/${'a'.repeat(256)}`, { user: ALICE })
+      expect(res.status).toBe(422)
+      expect(errorCode(res.body)).toBe('validation_failed')
     })
   })
 

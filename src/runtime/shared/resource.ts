@@ -49,10 +49,14 @@ export function normalizeResource(input: unknown, maxLength = 512): string {
   if (value.length === 0) {
     throw new Error('resource must not be empty')
   }
-  // `threads/` is reserved for comment-scoped API routes. Rejecting it
-  // here keeps resource ids unambiguous with `/api/_comments/threads/...`.
+  // `threads/` is reserved for comment-scoped API routes and `users/` for the
+  // user-data routes. Rejecting them here keeps resource ids unambiguous with
+  // `/api/_comments/threads/...` and `/api/_comments/users/...`.
   if (value === 'threads' || value.startsWith('threads/')) {
     throw new Error('resource must not use the reserved "threads/" prefix')
+  }
+  if (value === 'users' || value.startsWith('users/')) {
+    throw new Error('resource must not use the reserved "users/" prefix')
   }
   return value
 }

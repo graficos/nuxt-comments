@@ -36,6 +36,14 @@ export interface ModuleOptions {
        */
       binding?: string
     }
+    /**
+     * Role name that grants moderation authority (erasing another user's data
+     * via `DELETE /api/_comments/users/:userId`). Read from the Better Auth
+     * server session only — never from the client. Server-only config.
+     * Must match the role string Better Auth puts on `session.user.role`.
+     * @default 'admin'
+     */
+    adminRole?: string
   }
   /**
    * Override any component string (including `aria-label`s) for i18n.
@@ -57,6 +65,8 @@ export interface RuntimeConfigComments {
   databaseBinding: string
   rateLimiter: 'none' | 'memory'
   rateLimiterTrustProxy: boolean
+  /** Server-only role name that grants moderation authority. @default 'admin' */
+  adminRole: string
 }
 
 export interface RuntimeConfigPublicComments {

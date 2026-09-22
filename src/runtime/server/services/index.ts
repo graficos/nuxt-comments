@@ -11,7 +11,10 @@ import type { CommentsService } from './comments.service'
 export function useCommentsService(event: H3Event): CommentsService {
   const store = getCommentsStore(event)
   const rc = useRuntimeConfig(event)
-  const config = serviceConfigFromRuntimeConfig(rc.public.comments ?? {})
+  const config = serviceConfigFromRuntimeConfig(
+    rc.public.comments ?? {},
+    rc.comments?.adminRole ?? 'admin',
+  )
   const limiter = getRateLimiter(rc.comments?.rateLimiter ?? 'memory', {
     trustProxy: rc.comments?.rateLimiterTrustProxy ?? false,
   })

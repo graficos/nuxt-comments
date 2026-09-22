@@ -1,5 +1,5 @@
 import type { Comment, Cursor, Reaction, ReactionSummary } from '../../shared/types'
-import type { CommentsStore } from '../repositories/comments-store'
+import type { CommentsStore, DeleteUserDataResult } from '../repositories/comments-store'
 import type { ViewerInfo } from './auth'
 import { normalizeResource, ResourceLengthError } from '../../shared/resource'
 import {
@@ -17,6 +17,8 @@ export interface CommentsServiceConfig {
   maxResourceLength: number
   defaultPageSize: number
   maxPageSize: number
+  /** Role name that grants moderation authority (server-only). */
+  adminRole: string
 }
 
 export interface CommentsServiceDeps {
@@ -196,6 +198,27 @@ export function createCommentsService(deps: CommentsServiceDeps) {
     return comment
   }
 
+  /**
+   * Erase every piece of the target user's personally identifiable data in the
+   * comments domain (reactions, comment bodies, author snapshots, and the user
+   * id on surviving tombstones).
+   *
+   * Authority is the caller themself, or a moderator whose role — read from the
+   * Better Auth **server** session — matches `config.adminRole`. The check fails
+   * closed: with no role on the session (e.g. the Better Auth admin plugin is
+   * not configured) only self-erasure is allowed. Nothing about authority is
+   * accepted from the request.
+   */
+  async function deleteUserData(targetUserId: string): Promise<DeleteUserDataResult> {
+    await checkRateLimit('comments:delete-user')
+    const viewer = await deps.getViewer()
+    if (!viewer) throw unauthenticated()
+    const isSelf = viewer.id === targetUserId
+    const isAdmin = viewer.role !== null && viewer.role === config.adminRole
+    if (!isSelf && !isAdmin) throw forbidden('you can only erase your own data unless you are an admin')
+    return store.deleteUserData(targetUserId)
+  }
+
   return {
     listTopLevel,
     listReplies,
@@ -206,6 +229,7 @@ export function createCommentsService(deps: CommentsServiceDeps) {
     deleteComment,
     addReaction,
     removeReaction,
+    deleteUserData,
   }
 }
 
@@ -216,7 +240,7 @@ export function serviceConfigFromRuntimeConfig(rc: {
   reactions?: { enabled?: boolean, types?: string[] }
   limits?: { maxBodyLength?: number, maxResourceLength?: number }
   pagination?: { pageSize?: number, maxPageSize?: number }
-}): CommentsServiceConfig {
+}, adminRole = 'admin'): CommentsServiceConfig {
   return {
     reactionsEnabled: rc.reactions?.enabled ?? true,
     reactionTypes: rc.reactions?.types ?? ['like'],
@@ -224,5 +248,6 @@ export function serviceConfigFromRuntimeConfig(rc: {
     maxResourceLength: rc.limits?.maxResourceLength ?? 512,
     defaultPageSize: rc.pagination?.pageSize ?? 20,
     maxPageSize: rc.pagination?.maxPageSize ?? 100,
+    adminRole,
   }
 }

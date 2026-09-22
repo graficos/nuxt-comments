@@ -44,6 +44,14 @@ describe('normalizeResource', () => {
     expect(normalizeResource('blog/threads')).toBe('blog/threads')
     expect(normalizeResource('blog/threads/abc')).toBe('blog/threads/abc')
   })
+  it('rejects the reserved "users/" prefix', () => {
+    expect(() => normalizeResource('users')).toThrow()
+    expect(() => normalizeResource('users/alice')).toThrow()
+    expect(() => normalizeResource('/users/alice')).toThrow()
+    // ...but nested occurrences are fine
+    expect(normalizeResource('blog/users')).toBe('blog/users')
+    expect(normalizeResource('blog/users/alice')).toBe('blog/users/alice')
+  })
 })
 
 describe('resourceFromParam', () => {

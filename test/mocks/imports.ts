@@ -11,7 +11,7 @@ export async function getUserSession(_event: unknown) {
 
 export function useRuntimeConfig() {
   return {
-    comments: { databaseBinding: 'DB', rateLimiter: 'memory' },
+    comments: { databaseBinding: 'DB', rateLimiter: 'memory', adminRole: 'admin' },
     public: {
       comments: {
         pagination: { pageSize: 20, maxPageSize: 100 },

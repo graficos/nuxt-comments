@@ -9,6 +9,8 @@ export interface TestUser {
   id: string
   name?: string | null
   image?: string | null
+  /** Role from the Better Auth session (e.g. the admin plugin's `role`). */
+  role?: string | null
 }
 
 let currentUser: TestUser | null = null

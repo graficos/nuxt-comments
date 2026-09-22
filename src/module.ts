@@ -108,6 +108,7 @@ export default defineNuxtModule<ModuleOptions>({
         databaseBinding: options.database?.binding ?? 'DB',
         rateLimiter: options.rateLimiter ?? 'memory',
         rateLimiterTrustProxy: options.rateLimiterTrustProxy ?? false,
+        adminRole: options.auth?.adminRole ?? 'admin',
       },
     ) as NonNullable<typeof nuxt.options.runtimeConfig.comments>
 
@@ -165,6 +166,7 @@ export default defineNuxtModule<ModuleOptions>({
       'reactions.get',
       'reactions.post',
       'reactions-type.delete',
+      'users.delete',
     ]
     const routes: Record<string, string> = {
       'resource.get': `${apiBase}/**:resource`,
@@ -176,6 +178,7 @@ export default defineNuxtModule<ModuleOptions>({
       'reactions.get': `${apiBase}/threads/reactions`,
       'reactions.post': `${apiBase}/threads/:commentId/reactions`,
       'reactions-type.delete': `${apiBase}/threads/:commentId/reactions/:type`,
+      'users.delete': `${apiBase}/users/:userId`,
     }
     for (const file of handlerFiles) {
       addServerHandler({

@@ -51,6 +51,8 @@ describe('nuxt-comments module (static)', () => {
 describe('nuxt-comments module (installed in the playground app)', () => {
   it('merges module options into runtimeConfig (server + public)', () => {
     expect(nuxt.options.runtimeConfig.comments?.databaseBinding).toBe('DB')
+    // adminRole is server-only moderation config
+    expect(nuxt.options.runtimeConfig.comments?.adminRole).toBe('admin')
     const pub = nuxt.options.runtimeConfig.public?.comments
     expect(pub?.pagination?.pageSize).toBe(20)
     expect(pub?.reactions?.enabled).toBe(true)
@@ -60,6 +62,8 @@ describe('nuxt-comments module (installed in the playground app)', () => {
     expect(pub?.componentsPrefix).toBe('')
     // no secrets leak into the public runtime config
     expect(JSON.stringify(pub)).not.toMatch(/secret/i)
+    // the admin role must never be exposed to the client
+    expect(JSON.stringify(pub)).not.toMatch(/adminRole/i)
   })
 
   it('registers the namespaced server handlers', () => {
@@ -73,6 +77,7 @@ describe('nuxt-comments module (installed in the playground app)', () => {
       { route: '/api/_comments/threads/:commentId/replies', method: 'POST' },
       { route: '/api/_comments/threads/:commentId/reactions', method: 'POST' },
       { route: '/api/_comments/threads/:commentId/reactions/:type', method: 'DELETE' },
+      { route: '/api/_comments/users/:userId', method: 'DELETE' },
     ]))
     // every handler of ours lives in the internal namespace
     const ours = handlers.filter(h => (h.route ?? '').startsWith('/api/_comments'))

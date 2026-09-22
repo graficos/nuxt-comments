@@ -9,10 +9,20 @@ export interface ViewerInfo {
   id: string
   name: string | null
   image: string | null
+  /**
+   * Role from the Better Auth server session (e.g. the admin plugin's `role`).
+   * Server-only: used for moderation checks, never exposed to clients.
+   */
+  role: string | null
 }
 
 interface SessionLike {
-  user: { id: string, name?: string | null, image?: string | null } | null
+  user: {
+    id: string
+    name?: string | null
+    image?: string | null
+    role?: string | null
+  } | null
 }
 
 /**
@@ -29,6 +39,7 @@ export async function getViewer(event: H3Event): Promise<ViewerInfo | null> {
       id: session.user.id,
       name: session.user.name ?? null,
       image: session.user.image ?? null,
+      role: session.user.role ?? null,
     }
   }
   catch (err) {
