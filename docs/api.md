@@ -15,14 +15,31 @@ All routes live under the internal `/api/_comments` namespace so they cannot col
 | `GET` | `/api/_comments/threads/reactions?ids=a,b,c` | public | Batch reaction summaries (counts + viewer reactions) for comment ids. |
 | `POST` | `/api/_comments/threads/:commentId/reactions` | required | Add a reaction `{ type }`. |
 | `DELETE` | `/api/_comments/threads/:commentId/reactions/:type` | required | Remove your reaction of a type. |
+| `DELETE` | `/api/_comments/users/:userId` | required + self/admin | Erase a user's personally identifiable data in the comments domain. |
 
 ### Content vs reactions
 
 Comment list/reply responses contain **no reaction data**. Reactions are per-viewer and dynamic, so they are fetched separately (`GET .../threads/reactions?ids=...`) and merged client-side. This keeps the comment content public and cacheable while `useComments` handles the hydration. Reaction fields (`reactionCounts`, `viewerReactions`) only appear on comments after the client hydrates them.
 
-### Why `threads/`?
+### Why `threads/` and `users/`?
 
-Resource identifiers are opaque and may contain slashes. If comment operations lived directly at `/api/_comments/:commentId`, a resource such as `blog/reactions` would be ambiguous with "a reaction on comment `blog`". Comment-scoped operations therefore live under the reserved `threads/` prefix, and `normalizeResource` rejects resources beginning with `threads/`. This keeps `/api/_comments/blog/reactions` unambiguously a resource.
+Resource identifiers are opaque and may contain slashes. If comment operations lived directly at `/api/_comments/:commentId`, a resource such as `blog/reactions` would be ambiguous with "a reaction on comment `blog`". Comment-scoped operations therefore live under the reserved `threads/` prefix, and user-scoped operations under `users/`. `normalizeResource` rejects resources beginning with either prefix. This keeps `/api/_comments/blog/reactions` unambiguously a resource.
+
+### Erase a user's data
+
+```http
+DELETE /api/_comments/users/01JB...
+```
+
+Response `200`:
+
+```json
+{ "success": true, "comments": 4, "reactions": 7 }
+```
+
+`comments` counts rows hard-deleted plus rows tombstoned by this call; `reactions` counts reactions removed. Authorization is enforced server-side: the caller must be the user themself, or a moderator whose session role equals `comments.auth.adminRole` (default `'admin'`, see [authentication.md](./authentication.md#moderation--admin-role)). An unauthenticated caller gets `401`; an authenticated non-moderator erasing someone else gets `403`. The role is read from the Better Auth server session only — never from the request.
+
+This endpoint erases **only the comments domain**. Deleting the Better Auth user/session/account rows is the consumer's responsibility. See [privacy.md](./privacy.md) for the full erasure story and the consumer's obligations.
 
 ### Create a comment
 
@@ -145,12 +162,15 @@ Deletion is deliberate and documented. Permanent destruction only happens where 
 
 | Trigger | Behavior |
 |---|---|
-| Author deletes own comment | **Soft-delete**: `body` is set to `NULL`, `deleted_at`/`deleted_by='author'` are set, and reactions on it are removed. The row remains as a `[deleted]` tombstone so the thread survives (this applies to top-level comments and replies alike). The author snapshot is retained until account deletion. |
-| Admin `deleteCommentsUser(userId)` | Clears `author_name`/`author_image` on **every** comment the user owns (including comments the user had already soft-deleted), hard-deletes **all** of the user's reactions, **hard-deletes** the user's comments that have no replies, and **soft-deletes** the user's comments that have replies (`deleted_by='user-deletion'`). Returns `{ comments, reactions }` counts; `comments` is rows hard-deleted plus rows soft-deleted by this call. |
+| Author deletes own comment | **Soft-delete**: `body` is set to `NULL`, `deleted_at`/`deleted_by='author'` are set, and reactions on it are removed. The row remains as a `[deleted]` tombstone so the thread survives (this applies to top-level comments and replies alike). The author snapshot and user id are retained until account deletion. |
+| User erasure (`DELETE /api/_comments/users/:userId` or `deleteCommentsUser(userId)`) | Hard-deletes **all** of the user's reactions, **hard-deletes** the user's comments that have no replies, and **soft-deletes** the user's comments that have replies (`deleted_by='user-deletion'`). The surviving tombstones have `user_id`, `author_name`, `author_image` and `body` set to `NULL` — including comments the user had already soft-deleted. Returns `{ comments, reactions }` counts; `comments` is rows hard-deleted plus rows tombstoned by this call. |
 
-No display name or avatar survives account deletion, regardless of the comment's prior delete state.
+No display name, avatar, body, or user id survives user erasure, regardless of the comment's prior delete state. A tombstone is kept only when the comment has replies, purely to preserve thread structure; it carries no personal data.
 
-Admin user deletion is a **server-only utility**, not an HTTP endpoint:
+The same operation is available two ways:
+
+- **HTTP primitive** — `DELETE /api/_comments/users/:userId`, self-or-admin (see [Erase a user's data](#erase-a-users-data)).
+- **Server-only utility** — `deleteCommentsUser(event, userId)` from `#comments/server`, with **no** authorization of its own. Use it from your own trusted code (e.g. an account-deletion flow or an admin route):
 
 ```ts
 import { deleteCommentsUser } from '#comments/server'
@@ -161,4 +181,4 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-Never expose it without your own authorization check.
+Never expose it without your own authorization check. See [privacy.md](./privacy.md) for the account-deletion recipe.

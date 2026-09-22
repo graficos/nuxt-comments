@@ -12,6 +12,7 @@ An embeddable, **unstyled** comments system for **Nuxt 4**, backed by **Cloudfla
 - 🔑 Server-side ownership checks (edit/delete your own comments only)
 - 🕳️ Soft deletion that preserves threads (`[deleted]` placeholders)
 - 🚫 Admin user deletion (`deleteCommentsUser`) with documented semantics
+- 🧹 PII erasure primitive (`DELETE /api/_comments/users/:userId`) that leaves no user id, name, avatar, body or reaction behind — see [privacy.md](./docs/privacy.md)
 - 💪🏽 Shared validation, consistent HTTP error envelope (thanks to Valibot)
 - ⏱️ Rate-limiter extension point (Cloudflare-native integration documented)
 - 🎨 Unstyled, accessible components with typed slots and per-layer class props
@@ -143,6 +144,8 @@ npx wrangler d1 migrations apply my-comments --remote
 
 > **Auth tables.** `migrations/auth/` holds Better Auth's tables and is only needed when you set `comments.auth.database.binding`. Wrangler's `migrations_dir` is not recursive, so apply it with a separate Wrangler config pointing at that folder. See [docs/authentication.md](./docs/authentication.md#turnkey-d1-persistence-opt-in).
 
+> **Upgrading.** `migrations/0002_user_id_nullable.sql` makes `comments.user_id` nullable so user erasure can leave no trace. Copy the new file (or re-point `migrations_dir`) and re-run `wrangler d1 migrations apply`; already-applied migrations are skipped.
+
 Then use the component:
 
 ```vue
@@ -162,6 +165,7 @@ Then use the component:
 | [Cloudflare & D1](./docs/cloudflare-d1.md) | Database creation, Wrangler binding, local development, migrations, production                |
 | [Components](./docs/components.md)         | `<NuxtComments>` props/slots/events, composables, types, styling strategy                     |
 | [Server API](./docs/api.md)                | Endpoints, validation, errors, pagination, deletion policy                                    |
+| [Privacy & erasure](./docs/privacy.md)     | Stored personal data, the PII erasure primitive, account-deletion recipe, controller duties   |
 | [Adapters](./docs/adapters.md)             | `CommentsStore` boundary, D1 adapter, future GitHub Discussions architecture                  |
 | [Playground](./playground/README.md)       | Running the demo app locally, OAuth setup                                                     |
 

@@ -154,6 +154,7 @@ return {
   id: session.user.id,
   name: session.user.name ?? null,
   image: session.user.image ?? null,
+  role: session.user.role ?? null, // server-only; used for moderation
 };
 ```
 
@@ -165,6 +166,71 @@ await signIn("github"); // provider name is consumer-owned
 ```
 
 Reads are public. Creating, editing, deleting, replying and reacting all require an authenticated session.
+
+## Moderation & admin role
+
+The only moderation capability in this package is **erasing a user's data**
+(`DELETE /api/_comments/users/:userId`, see [privacy.md](./privacy.md)). A caller
+is allowed when they are the user themself **or** a moderator whose role — read
+from the Better Auth **server** session — matches `comments.auth.adminRole`
+(default `'admin'`).
+
+The package never grants, stores, or infers a role. It only reads
+`session.user.role`, which Better Auth sets. Authority is never accepted from the
+request body or headers, and the admin role name lives in server-only runtime
+config, so it is never shipped to the client.
+
+### How a user becomes an admin
+
+Roles come from Better Auth's [admin plugin](https://www.better-auth.com/docs/plugins/admin):
+
+1. **Enable the plugin.** Add it to the server auth config and the client:
+
+   ```ts
+   // server/auth.config.ts
+   import { defineServerAuth } from '@nuxtjs/better-auth/config';
+   import { admin } from 'better-auth/plugins';
+
+   export default defineServerAuth({
+     plugins: [admin()],
+   });
+   ```
+
+   ```ts
+   // app/auth.config.ts
+   import { defineClientAuth } from '@nuxtjs/better-auth/config';
+   import { adminClient } from 'better-auth/client/plugins';
+
+   export default defineClientAuth({
+     plugins: [adminClient()],
+   });
+   ```
+
+2. **Apply the plugin schema** so `user.role` exists (`npx auth migrate`, or
+   `npx auth generate` if you manage migrations yourself).
+
+3. **Create or promote the first admin.** Any one of:
+
+   ```bash
+   # create a brand-new admin user
+   npx auth@latest create-admin --email admin@example.com --name "Admin" --role admin
+   ```
+
+   ```ts
+   // or promote an existing user, server-side
+   await auth.api.setRole({
+     body: { userId, role: 'admin' },
+     headers: await headers(),
+   });
+   ```
+
+   Or list user ids in the plugin's `adminUserIds` option.
+
+4. **Match the role name.** `comments.auth.adminRole` must equal the role string
+   Better Auth puts on `session.user.role` (default `'admin'`). For custom role
+   names (`superadmin`, …) define them via the plugin's access control and set
+   `adminRole` to match. If you never configure roles, `role` is `null` and the
+   endpoint fails closed — only self-erasure is allowed.
 
 ## Identity model
 

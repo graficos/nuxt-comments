@@ -19,6 +19,7 @@ export default defineNuxtConfig({
       database: {
         binding: 'DB',
       },
+      adminRole: 'admin',
     },
     messages: {
       // Override any component string; dynamic parts use `{token}`.
@@ -50,6 +51,7 @@ export default defineNuxtConfig({
 |---|---|---|---|
 | `database.binding` | `string` | `'DB'` | Name of the D1 binding to read from `event.context.cloudflare.env`. Must match your Wrangler file. |
 | `auth.database.binding` | `string` | – | D1 binding holding Better Auth's tables. **Opt-in:** when set, Better Auth is backed by D1 (email/password, sessions, revocation). Omit to leave Better Auth on its in-memory default. See [authentication.md](./authentication.md#turnkey-d1-persistence-opt-in). |
+| `auth.adminRole` | `string` | `'admin'` | Role name that grants moderation authority — erasing another user's data via `DELETE /api/_comments/users/:userId`. **Server-only** (never in the public runtime config or sent to clients); read from the Better Auth server session. Must match the role string Better Auth puts on `session.user.role`. See [authentication.md](./authentication.md#moderation--admin-role) and [privacy.md](./privacy.md). |
 | `messages` | `Partial<CommentsMessages>` | English defaults | Override any built-in component string, including `aria-label`s. Merged over the defaults; dynamic parts use `{token}` placeholders (e.g. `continueWith: 'Continue with {provider}'`). See [Messages](#messages-i18n). |
 | `pagination.pageSize` | `number` | `20` | Default page size for list endpoints and the client composable. |
 | `pagination.maxPageSize` | `number` | `100` | Hard cap on `?limit=` values. Requests above this are clamped, never rejected. |
@@ -115,6 +117,7 @@ Both forms are the same components. The module registers them explicitly with `a
 |---|---|
 | `databaseBinding` | Resolved from `database.binding`. |
 | `rateLimiter` | Resolved from `rateLimiter`. |
+| `adminRole` | Resolved from `auth.adminRole`. Server-only moderation authority; never exposed to the client. |
 
 ### Public (`runtimeConfig.public.comments`)
 
@@ -156,7 +159,7 @@ A resource is an opaque, non-empty string identifying what a thread belongs to �
 - a trailing slash is removed;
 - case is preserved;
 - the result must be 1–512 characters;
-- the reserved prefix `threads/` is rejected (it is used by comment-scoped API routes, see [api.md](./api.md)).
+- the reserved prefixes `threads/` and `users/` are rejected (they are used by the package's control routes, see [api.md](./api.md)).
 
 Store the resource you render the component with; `normalizeResource` is applied consistently on the server and when building API paths on the client. Because the canonical form never has a leading slash, the identifier round-trips through `/api/_comments/:resource` without ambiguity.
 

@@ -58,8 +58,9 @@ At runtime the module reads the binding from `event.context.cloudflare.env[comme
 The package ships SQL migrations in `migrations/` (inside the published package: `node_modules/nuxt-comments/migrations/`):
 
 ```text
-0001_init.sql              # comments tables
-auth/0001_better_auth.sql  # Better Auth tables (only if comments.auth.database.binding is set)
+0001_init.sql               # comments tables
+0002_user_id_nullable.sql   # makes comments.user_id nullable (user erasure)
+auth/0001_better_auth.sql   # Better Auth tables (only if comments.auth.database.binding is set)
 ```
 
 **The package never runs migrations during Nuxt startup.** Applying migrations modifies your database and must be treated as a deployment operation, just like any other D1 migration.
@@ -110,8 +111,9 @@ If you prefer not to copy files, set `migrations_dir` on the D1 binding in a Wra
 
 ### Package upgrades
 
-- Each package release that changes the schema adds a new numbered file, e.g. `0002_add_mentions.sql`.
+- Each package release that changes the schema adds a new numbered file, e.g. `0002_user_id_nullable.sql`.
 - Copy the new files (or re-point `migrations_dir`) and re-run `wrangler d1 migrations apply`. Already-applied migrations are skipped.
+- `0002_user_id_nullable.sql` rebuilds nothing: it adds a temporary column, copies `user_id`, drops the old column and renames the new one (`ALTER TABLE ... DROP/RENAME COLUMN`). This is deliberate — a `DROP TABLE` rebuild would cascade-delete `comment_reactions` and trip the self-referential `parent_id` foreign key, since D1 always enforces foreign keys and cannot disable them inside a migration.
 - Always review the new SQL before applying it to production. Migrations are additive; the package does not rewrite history.
 
 ## 4. Local development
