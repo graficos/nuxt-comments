@@ -1,6 +1,6 @@
 {
   "name": "@graficos/nuxt-comments",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Embeddable, unstyled comments system for Nuxt 4, backed by Cloudflare D1 and authenticated via @nuxtjs/better-auth.",
   "type": "module",
   "packageManager": "pnpm@12.3.4",
