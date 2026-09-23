@@ -38,6 +38,11 @@ export default defineNuxtConfig({
       enabled: true,
       types: ['like', 'heart', 'laugh'],
     },
+    // The in-memory limiter (30 mutations/min per IP) is off outside
+    // production builds so local dev and the e2e suite are not throttled.
+    // `import.meta.dev` is not defined in the jiti-loaded nuxt.config, so
+    // use the NODE_ENV equivalent (`nuxt dev` => development).
+    rateLimiter: process.env.CI || process.env.NODE_ENV !== 'production' ? 'none' : 'memory',
     // Dogfood the unprefixed component API: <Comments>.
     components: {
       prefix: '',

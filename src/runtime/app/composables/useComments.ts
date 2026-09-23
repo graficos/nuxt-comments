@@ -95,6 +95,17 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   // Comment ids whose reactions have already been hydrated for this resource.
   const hydratedIds = new Set<string>()
 
+  // Reaction-hydration batching state. Declared here rather than with the rest
+  // of the hydration block below because the `immediate` + `sync` watcher on
+  // `initial.data` calls `scheduleReactionHydration` during setup — before any
+  // later `let` would be initialized (TDZ).
+  let reactionQueue: Comment[] = []
+  let reactionFlushScheduled = false
+  // Comment ids with a local reaction mutation (optimistic patch). A hydration
+  // response that was already in flight when the user reacted must not clobber
+  // that newer local state.
+  const locallyPatchedReactions = new Set<string>()
+
   function resetThreadState() {
     repliesByComment.value = {}
     expanded.value = {}
@@ -128,6 +139,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   watch(resourceRef, () => {
     resourceEpoch++
     hydratedIds.clear()
+    locallyPatchedReactions.clear()
     resetThreadState()
   })
 
@@ -149,7 +161,12 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     if (err) error.value = err as unknown as Error
   }, { flush: 'sync' })
 
-  const loading = computed(() => initial.pending.value || fetchingMore.value)
+  // `idle` means the first fetch has not run yet — on a prerendered page the
+  // server skips it (`server: false`), so treat idle as loading to render the
+  // loading state instead of the empty state, and keep SSR/hydration aligned.
+  const loading = computed(() =>
+    initial.pending.value || initial.status.value === 'idle' || fetchingMore.value,
+  )
 
   async function fetchMore() {
     if (!hasMore.value || fetchingMore.value) return
@@ -176,6 +193,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   async function refresh() {
     resourceEpoch++
     hydratedIds.clear()
+    locallyPatchedReactions.clear()
     resetThreadState()
     await initial.refresh()
   }
@@ -225,9 +243,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
   // Reactions are not part of the content responses, so they are fetched in a
   // single batch once comments arrive and merged in. Batching across the
   // initial page and lazy reply loads avoids one request per comment.
-  let reactionQueue: Comment[] = []
-  let reactionFlushScheduled = false
-
+  // (`reactionQueue` / `reactionFlushScheduled` are declared near the top.)
   function scheduleReactionHydration(items: Comment[]) {
     if (!import.meta.client || items.length === 0) return
     const fresh = items.filter(c => !hydratedIds.has(c.id))
@@ -265,6 +281,9 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
     function patch(c: Comment): Comment {
       const summary = byId.get(c.id)
       if (!summary) return c
+      // Skip comments whose reaction state was mutated locally (optimistic
+      // toggle) after this hydration request was sent.
+      if (locallyPatchedReactions.has(c.id)) return c
       return { ...c, reactionCounts: summary.counts, viewerReactions: summary.viewerReactions }
     }
     comments.value = comments.value.map(patch)
@@ -330,6 +349,7 @@ export function useComments(resource: string | Ref<string>, options?: UseComment
 
   /** Patch reaction counts/viewer state for a comment in place (optimistic UI). */
   function patchReaction(commentId: string, type: string, active: boolean) {
+    locallyPatchedReactions.add(commentId)
     function patch(c: Comment): Comment {
       if (c.id !== commentId) return c
       const counts = { ...(c.reactionCounts ?? {}) }

@@ -1,5 +1,7 @@
 # @graficos/nuxt-comments
 
+[![E2E](https://github.com/graficos/nuxt-comments/actions/workflows/e2e.yml/badge.svg?branch=main)](https://github.com/graficos/nuxt-comments/actions/workflows/e2e.yml)
+
 An embeddable, **unstyled** comments system for **Nuxt 4**, backed by **Cloudflare D1** and authenticated through the host application's **Better Auth** setup.
 
 `@graficos/nuxt-comments` is a reusable Nuxt module — not a hosted widget. It ships the threaded comments primitive (data model, API, composables, unstyled components) and leaves identity to [`@nuxtjs/better-auth`](https://better-auth.nuxt.dev) and presentation to you.
@@ -185,9 +187,13 @@ pnpm run lint
 pnpm run test             # workers-runtime + node/nuxt test suites (101 tests)
 pnpm run test:types
 pnpm run prepack          # production build of the published package
+
+# Browser end-to-end tests (Playwright) against the playground
+pnpm --dir playground exec playwright install chromium   # one-time
+pnpm --dir playground e2e
 ```
 
-See [playground/README.md](./playground/README.md) for OAuth setup and the admin deletion demo.
+See [playground/README.md](./playground/README.md) for OAuth setup, the admin deletion demo, and the [end-to-end tests](./playground/README.md#end-to-end-tests).
 
 ## Package structure
 
@@ -205,8 +211,11 @@ src/
       repositories/                 # CommentsStore interface + D1CommentsStore
       utils/                        # store resolution, errors, HTTP mapping, rate limiting
 migrations/
-  0001_init.sql                     # shipped SQL migrations
+  0001_init.sql                     # comments tables
+  0002_user_id_nullable.sql         # nullable user_id for PII erasure
+  auth/                             # Better Auth tables (opt-in D1 provider)
 playground/                         # Nuxt 4 app exercising the module
+  e2e/                              # Playwright end-to-end tests + fixtures
 test/
   unit/                             # domain + service + resource tests
   api/                              # API handlers on real Miniflare D1

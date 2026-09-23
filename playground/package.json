@@ -7,9 +7,16 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "e2e:install": "playwright install chromium",
+    "e2e:reset": "rm -rf .wrangler/state && pnpm -w run playground:migrate && pnpm -w run playground:migrate:auth",
+    "e2e:serve": "pnpm run e2e:reset && nuxt dev --port 3100"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "nitro-cloudflare-dev": "^0.2.2"
   }
 }

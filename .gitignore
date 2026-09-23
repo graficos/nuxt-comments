@@ -11,6 +11,10 @@ playground/.nuxt
 playground/.output
 playground/.data
 playground/.wrangler
+playground/playwright-report
+playground/test-results
+playground/blob-report
+playground/.playwright
 coverage
 *.log
 *.tgz

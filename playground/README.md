@@ -120,6 +120,63 @@ const result = await deleteCommentsUser(event, userId);
 
 Set `PLAYGROUND_ADMIN_TOKEN` in `.env` and paste the same value on the `/admin` page. The deletion semantics are documented in [../docs/api.md](../docs/api.md#deletion-policy).
 
+## End-to-end tests
+
+Browser tests live in `playground/e2e/` and run against a real `nuxt dev`
+instance (Playwright starts it for you). They cover the cross-boundary flows
+unit/component/API tests cannot: SSR HTML → hydration → post → reply → react →
+delete → erase.
+
+### Run it
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm run dev:prepare                                   # stub-build the module
+pnpm --dir playground exec playwright install chromium # one-time browser download
+pnpm --dir playground e2e
+```
+
+Useful variants:
+
+```bash
+pnpm --dir playground e2e:ui       # interactive Playwright UI
+pnpm --dir playground e2e:headed   # watch the browser
+pnpm --dir playground e2e -- ssr-and-auth.spec.ts   # a single spec
+```
+
+### How it works
+
+- **Fresh database per run.** `e2e:serve` wipes `playground/.wrangler/state`,
+  re-applies the comments and Better Auth migrations, then boots `nuxt dev` on
+  **port 3100** (so it never clashes with a running `pnpm dev`). Playwright never
+  reuses an existing server, so every run starts clean.
+- **Isolation between tests.** There are no shared seeds: each test signs up its
+  own Better Auth user through `POST /api/auth/sign-up/email` and works on a
+  unique resource id (`/blog/e2e-<random>`), so specs are independent and can run
+  in parallel.
+- **Auth without the UI.** The login slot is OAuth-only, which cannot be driven
+  headlessly, so the fixtures create a real session via the sign-up API and
+  inject the cookie into the browser context.
+- **Rate limiting.** The in-memory limiter would throttle a parallel suite, so
+  `playground/nuxt.config.ts` disables it outside production builds
+  (`process.env.CI || process.env.NODE_ENV !== 'production'`).
+
+### What's covered
+
+| Spec | Flows |
+| --- | --- |
+| `ssr-and-auth` | SSR renders comments; reactions hydrate client-side without a reload; unauthenticated gating |
+| `comment-lifecycle` | post + persist; edit; delete (tombstone); post again; plain-text/XSS safety |
+| `replies` | add reply; lazy "View replies"; delete reply; delete parent, preserve reply |
+| `reactions` | add/remove; persistence across reload; multi-user counts |
+| `privacy` | self-erasure scrubs PII and keeps threads; `401`/`403`; the token-gated `/admin` route |
+| `pagination` | "Load more" |
+
+> The moderator branch of `DELETE /api/_comments/users/:userId` (admin role) is
+> not covered yet — see the follow-up in [../ToDo.md](../ToDo.md).
+
 ## Styling
 
 The package is unstyled. All visual presentation for the playground lives in `playground/app/pages/*.vue` (scoped CSS and slot markup). This is deliberate — it demonstrates that a consumer can completely redesign layout, typography, buttons and reaction UI without forking the package.
