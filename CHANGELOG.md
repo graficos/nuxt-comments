@@ -1,5 +1,26 @@
 # @graficos/nuxt-comments
 
+## 0.5.1
+
+### Patch Changes
+
+- 34d9e26: Fix two reaction-hydration bugs surfaced by the new playground e2e suite:
+  
+  - The initial-page watcher (`immediate` + `flush: 'sync'`) called
+    `scheduleReactionHydration` during setup, before the hydration batching state
+    was initialized — a temporal-dead-zone crash on any page that rendered
+    comments with reactions enabled.
+  - A reaction-hydration response already in flight when the viewer toggled a
+    reaction could overwrite the optimistic update. Locally mutated comments are
+    now skipped when hydration summaries are merged.
+- 34d9e26: Treat the idle `useAsyncData` state as loading.
+  
+  On a prerendered page the server skips the initial fetch
+  (`server: !import.meta.prerender`), so the async-data status stays `idle`.
+  `useComments`' `loading` now includes `idle`, so `<Comments>` renders its
+  loading state in the prerendered HTML instead of the empty state (and stays
+  consistent through hydration). Consumers can drop `<ClientOnly>`.
+
 ## 0.5.0
 
 ### Minor Changes
