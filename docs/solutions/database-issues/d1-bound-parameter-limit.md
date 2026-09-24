@@ -57,10 +57,12 @@ for (const ids of chunk(commentIds, D1_MAX_BOUND_PARAMS - 1)) { /* getUserReacti
 
 **Writes/deletes — correlated predicates, then `batch()`.** Replace the id list with a
 correlated `EXISTS` / `NOT EXISTS` so the statement has a constant parameter count, and run the
-sequence in one `db.batch()` so it is atomic:
+full sequence in one `db.batch()` so it is atomic. The four statements drop the user's
+reactions, tombstone the comments that anchor a thread, hard-delete the remaining leaves, then
+scrub the survivors:
 
 ```ts
-const [reactions, , preserved, removed] = await this.db.batch([
+const [reactions, preserved, removed] = await this.db.batch([
   this.db.prepare('DELETE FROM comment_reactions WHERE user_id = ?').bind(userId),
   this.db.prepare(
     `UPDATE comments SET body = NULL, deleted_at = ?, deleted_by = 'user-deletion', updated_at = ?
@@ -71,6 +73,9 @@ const [reactions, , preserved, removed] = await this.db.batch([
     `DELETE FROM comments
       WHERE user_id = ? AND deleted_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = comments.id)`,
+  ).bind(userId),
+  this.db.prepare(
+    'UPDATE comments SET user_id = NULL, author_name = NULL, author_image = NULL WHERE user_id = ?',
   ).bind(userId),
 ])
 ```
