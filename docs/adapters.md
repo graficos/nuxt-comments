@@ -2,6 +2,8 @@
 
 The domain and API layers never talk to D1 directly. They depend on a small interface, `CommentsStore`, and the shipped `D1CommentsStore` implements it. This boundary is what makes an alternative backend (or a mirror) possible without touching the API, services, composables, or components.
 
+This is the package's application of **ports and adapters (hexagonal)**: `CommentsService` (the domain core) defines and depends on the ports — `CommentsStore` for persistence and `RateLimiter` for abuse prevention — and the adapters (`D1CommentsStore`, `InMemoryRateLimiter` / `NoopRateLimiter`) implement those ports and depend on infrastructure. Dependencies point inward (the core never imports `@cloudflare/workers-types`); implementations point outward. `useCommentsService(event)` is the composition root — the single place that constructs the concrete adapters and injects them.
+
 ```text
 Comments domain / CommentsService
               │
@@ -43,9 +45,11 @@ Design notes:
 
 `D1CommentsStore` uses parameterized prepared statements throughout and resolves its binding from the request event. See `src/runtime/server/repositories/d1-comments-store.ts`.
 
+The server-only `deleteCommentsUser(event, userId)` (`src/runtime/server/services/admin.service.ts`) is the one path that reaches the store without going through `CommentsService`: it calls `getCommentsStore(event).deleteUserData(userId)` directly and performs **no** authorization of its own. Consumers gate it behind their own admin check (see [privacy.md](./privacy.md)). The HTTP endpoint `DELETE /api/_comments/users/:userId` is different — it goes through `CommentsService.deleteUserData`, which enforces self-or-admin authority from the server session.
+
 ### Swapping implementations
 
-`getCommentsStore(event)` is the single place a concrete store is constructed. A consumer could replace it (for testing or a different backend) while the rest of the package is unchanged. The domain never imports `@cloudflare/workers-types`.
+`getCommentsStore(event)` is where the concrete store adapter is constructed, and `useCommentsService(event)` is the composition root that wires it (plus the limiter and viewer) into `createCommentsService`. A consumer could replace either point (for testing or a different backend) while the rest of the package is unchanged. The domain never imports `@cloudflare/workers-types`.
 
 ## Extension port
 

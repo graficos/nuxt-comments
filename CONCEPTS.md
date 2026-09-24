@@ -29,3 +29,4 @@ Erasing a user's personally identifiable data from the comments domain without d
 ## Flagged ambiguities
 
 - **"user deletion" vs "account deletion"** — user deletion is the comments-domain erasure only; account deletion is the two-step combination of user deletion followed by auth-account removal.
+- **"store" vs "repository"** — both name the persistence boundary; the project settles on *store*, and "repository" is not a separate layer.
